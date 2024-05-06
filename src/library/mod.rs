@@ -1,4 +1,5 @@
 pub mod cfg;
+pub mod crypto;
 pub mod dber;
 pub mod error;
 pub mod logger;

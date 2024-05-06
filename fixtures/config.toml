@@ -15,17 +15,18 @@ mine_target = "miner_server"
 database_target = "sqlx"
 
 path = "./logs"
-mine_file_level = "info"
+
 mine_formatting_level = "debug"
-mine_file = "mine.log"
-
-database_file_level = "warn"
 database_formatting_level = "info"
-database_file = "database.log"
-
-other_file_level = "warn"
 other_formatting_level = "info"
+
+mine_file = "mine.log"
+database_file = "database.log"
 other_file = "other.log"
+error_file = "error.log"
+
+file_level = "info"
+
 
 [mail]
 username="vainjoker@mail.ee"

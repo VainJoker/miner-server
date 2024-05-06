@@ -1,10 +1,10 @@
+pub mod constants;
+
 use std::sync::Arc;
 
 use tokio::signal;
 
-use crate::library::{
-    dber::DB, error::MinerResult, Dber, Mqer, Redis, Redisor,
-};
+use crate::library::{dber::DB, error::AppResult, Dber, Mqer, Redis, Redisor};
 
 pub struct AppState {
     pub db: Dber,
@@ -25,11 +25,11 @@ impl AppState {
         &self.db.pool
     }
 
-    pub async fn get_redis(&self) -> MinerResult<Redis> {
+    pub async fn get_redis(&self) -> AppResult<Redis> {
         Ok(self.redis.get_conn().await?)
     }
 
-    pub const fn get_mq(&self) -> MinerResult<&Mqer>{
+    pub const fn get_mq(&self) -> AppResult<&Mqer> {
         Ok(&self.mq)
     }
 }

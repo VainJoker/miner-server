@@ -16,19 +16,19 @@ pub struct AppConfig {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LogConfig {
-    // pub dev_level: String,
     pub path: String,
-    pub mine_file: String,
-    pub mine_file_level: String,
     pub mine_formatting_level: String,
-    pub other_file: String,
-    pub other_file_level: String,
     pub other_formatting_level: String,
+
+    pub mine_file: String,
+    pub other_file: String,
     pub database_file: String,
-    pub database_file_level: String,
-    pub database_formatting_level: String,
+    pub error_file: String,
+
+    pub file_level: String,
+
     pub mine_target: String,
-    pub database_target: String
+    pub database_target: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

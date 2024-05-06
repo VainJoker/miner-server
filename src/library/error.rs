@@ -66,7 +66,7 @@ pub enum AppError {
 pub enum AuthInnerError {
     #[error("UserAlreadyExists")]
     UserAlreadyExists,
-    #[error("UserAlreadyExists")]
+    #[error("WrongCredentials")]
     WrongCredentials,
     #[error("MissingCredentials")]
     MissingCredentials,
@@ -83,20 +83,26 @@ impl AppError {
                 (StatusCode::UNPROCESSABLE_ENTITY, 20001)
             }
             Self::AuthError(e) => match e {
-                AuthInnerError::WrongCredentials => todo!(),
-                AuthInnerError::MissingCredentials => todo!(),
-                AuthInnerError::TokenCreation => todo!(),
-                AuthInnerError::InvalidToken => todo!(),
+                AuthInnerError::WrongCredentials => {
+                    (StatusCode::UNAUTHORIZED, 10001)
+                }
+                AuthInnerError::TokenCreation => (StatusCode::FORBIDDEN, 10002),
+                AuthInnerError::InvalidToken => {
+                    (StatusCode::UNAUTHORIZED, 10003)
+                }
                 AuthInnerError::UserAlreadyExists => {
-                    (StatusCode::CONFLICT, 10002)
+                    (StatusCode::CONFLICT, 10004)
+                }
+                AuthInnerError::MissingCredentials => {
+                    (StatusCode::UNAUTHORIZED, 10005)
                 }
             },
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, 99999),
+            _ => (StatusCode::BAD_REQUEST, 99999),
         }
     }
 }
 
-pub type MinerResult<T> = Result<T, AppError>;
+pub type AppResult<T> = Result<T, AppError>;
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {

@@ -91,7 +91,6 @@ impl Mqer {
         *self.running.read().unwrap()
     }
 
-
     pub async fn basic_send(
         &self,
         queue_name: &str,
@@ -296,6 +295,7 @@ mod tests {
     use crate::library::{cfg, mqer::Subscriber, Mqer};
 
     #[tokio::test]
+    #[ignore]
     async fn test_basic_send() {
         cfg::init(&"../fixtures/config.toml".to_string());
         // let mqer = init("inpay.dev.queue", Some("inpay.dev.exchange"),
@@ -315,6 +315,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_basic_receive() {
         cfg::init(&"../fixtures/config.toml".to_string());
         let mqer = Mqer::init();

@@ -104,11 +104,10 @@ impl BwAccount {
         Ok(map.fetch_one(db).await?)
     }
 
-    // TODO: what will happen if many user have the same name
     pub async fn fetch_user_by_email_or_name(
         db: &PgPool,
         email_or_name: &str,
-    ) -> InnerResult<Option<Self>> {
+    ) -> InnerResult<Vec<Self>> {
         let map = sqlx::query_as!(
             Self,
             r#"SELECT id,account_id,name,email,email_verified_at,password,
@@ -117,7 +116,7 @@ impl BwAccount {
             FROM bw_account WHERE name = $1 or email = $1"#,
             email_or_name
         );
-        Ok(map.fetch_optional(db).await?)
+        Ok(map.fetch_all(db).await?)
     }
 
     pub async fn fetch_user_by_account_id(
@@ -132,6 +131,21 @@ impl BwAccount {
             registered_at, created_at,updated_at
             FROM bw_account WHERE account_id = $1"#,
             account_id
+        );
+        Ok(map.fetch_optional(db).await?)
+    }
+
+    pub async fn fetch_user_by_email(
+        db: &PgPool,
+        email: &str,
+    ) -> InnerResult<Option<Self>> {
+        let map = sqlx::query_as!(
+            Self,
+            r#"SELECT id,account_id,name,email,email_verified_at,password,
+            local_currency as "local_currency: _",system_lang as "system_lang: _",
+            registered_at, created_at,updated_at
+            FROM bw_account WHERE email = $1"#,
+            email
         );
         Ok(map.fetch_optional(db).await?)
     }

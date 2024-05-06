@@ -12,9 +12,9 @@ use crate::{
     miner::{
         api::route,
         bootstrap::{shutdown_signal, AppState},
+        service::mq_customer,
     },
 };
-use crate::miner::service::mq_customer;
 
 pub async fn serve() {
     let cfg = cfg::config();
@@ -38,16 +38,11 @@ pub async fn serve() {
     );
 
     // Run the MQCustomer
-    tokio::spawn(
-        mq_customer::MqCustomer::serve(inpay_state.clone())
-    );
-
+    tokio::spawn(mq_customer::MqCustomer::serve(inpay_state.clone()));
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal(inpay_state))
         .await
         .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
-
-
 }
