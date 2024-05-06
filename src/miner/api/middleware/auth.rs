@@ -1,0 +1,24 @@
+use axum::{
+    extract::Request, http::header::AUTHORIZATION, middleware::Next,
+    response::Response,
+};
+
+use crate::{
+    library::error::{AppError::AuthError, AuthInnerError, MinerResult},
+    miner::entity::claims::Claims,
+};
+
+pub async fn handle(request: Request, next: Next) -> MinerResult<Response> {
+    let token = request
+        .headers()
+        .get(AUTHORIZATION)
+        .and_then(|auth_header| auth_header.to_str().ok())
+        .and_then(|auth_value| auth_value.strip_prefix("Bearer "))
+        .ok_or(AuthError(AuthInnerError::InvalidToken))?;
+
+    let claims = Claims::parse_access_token(token)?;
+
+    tracing::debug!("User login success: {}", claims.uid);
+
+    Ok(next.run(request).await)
+}
