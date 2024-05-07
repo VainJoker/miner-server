@@ -34,7 +34,7 @@ impl AppState {
     }
 }
 
-pub async fn shutdown_signal(_state: Arc<AppState>) {
+pub async fn shutdown_signal(state: Arc<AppState>) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -55,9 +55,17 @@ pub async fn shutdown_signal(_state: Arc<AppState>) {
     tokio::select! {
         () = ctrl_c => {
             tracing::info!("Ctrl+C signal received.");
+            match state.mq.graceful_shutdown(){
+                Ok(_) => (),
+                Err(e) => tracing::error!("Error shutting down RabbitMQ: {:?}", e),
+            }
         },
         () = terminate => {
             tracing::info!("Terminate signal received.");
+            match state.mq.graceful_shutdown(){
+                Ok(_) => (),
+                Err(e) => tracing::error!("Error shutting down RabbitMQ: {:?}", e),
+            }
         },
     }
 }

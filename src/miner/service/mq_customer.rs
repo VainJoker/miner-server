@@ -11,7 +11,6 @@ use crate::{
 pub struct MqCustomer {}
 
 impl MqCustomer {
-    // TODO: Stop when bootstrap receive C-c
     pub async fn serve(state: Arc<AppState>) {
         let customer = MqCustomer {};
         match customer.email_sender(state.clone()).await {
@@ -35,10 +34,10 @@ impl MqCustomer {
                     })
                 });
             if result.is_ok() {
-                tracing::debug!("received:{}", message)
+                tracing::debug!("received:{}", message);
             }
         };
-        let delegate = Subscriber::new(func);
+        let delegate = Subscriber::new(func, mqer.clone());
         Ok(mqer
             .basic_receive(SEND_EMAIL_QUEUE, SEND_EMAIL_TAG, delegate)
             .await?)
