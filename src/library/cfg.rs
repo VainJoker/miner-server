@@ -31,7 +31,7 @@ pub struct LogConfig {
     pub database_target: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MailConfig {
     pub username: String,
     pub password: String,

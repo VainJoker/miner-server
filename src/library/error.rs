@@ -8,13 +8,14 @@ pub type InnerResult<T> = Result<T, AppInnerError>;
 
 #[derive(Error, Debug)]
 pub enum AppInnerError {
-    #[error("Database error: ")]
+    // TODO: Better Not Show
+    #[error("Database error: `{0}`")]
     DataBaseError(#[from] sqlx::Error),
     #[error(transparent)]
     RedisError(#[from] RedisorError),
-    #[error("RabbitMq error: ")]
+    #[error(transparent)]
     MQError(#[from] MqerError),
-    #[error("Email error: ")]
+    #[error("Email error: `{0}`")]
     EmailError(#[from] lettre::transport::smtp::Error),
     #[error("Internal server error")]
     Unknown(String),
@@ -24,17 +25,17 @@ pub enum AppInnerError {
 
 #[derive(Error, Debug)]
 pub enum RedisorError {
-    #[error("Redis connection error: ")]
+    #[error("Redis connection error: `{0}`")]
     PoolError(#[from] deadpool_redis::PoolError),
-    #[error("Redis execution error: ")]
+    #[error("Redis execution error: `{0}`")]
     ExeError(#[from] redis::RedisError),
 }
 
 #[derive(Error, Debug)]
 pub enum MqerError {
-    #[error("Mq connection error: ")]
+    #[error("Mq connection error: `{0}`")]
     PoolError(#[from] deadpool_lapin::PoolError),
-    #[error("Mq execution error: ")]
+    #[error("Mq execution error: `{0}`")]
     ExeError(#[from] deadpool_lapin::lapin::Error),
 }
 

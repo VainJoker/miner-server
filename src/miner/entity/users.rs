@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use super::claims::TokenSchema;
-use crate::entity::{
+use crate::models::{
     bw_account::BwAccount,
     types::{Currency, Language},
 };

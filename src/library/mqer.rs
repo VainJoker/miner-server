@@ -91,6 +91,12 @@ impl Mqer {
         *self.running.read().unwrap()
     }
 
+    pub fn stop(&self) {
+        let mut running = self.running.write().unwrap();
+        *running = false;
+        tracing::info!("MQ Stopped")
+    }
+
     pub async fn basic_send(
         &self,
         queue_name: &str,
@@ -161,7 +167,7 @@ impl Mqer {
         .set_delegate(delegate);
 
         while self.get_running() {
-            tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
         Ok(())
     }

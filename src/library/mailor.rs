@@ -4,7 +4,7 @@ use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, SmtpTransport, Tokio1Executor,
     Transport,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::library::{
     cfg,
@@ -12,17 +12,17 @@ use crate::library::{
     error::{AppInnerError, InnerResult},
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Email<'a> {
     pub to: &'a str,
     pub subject: &'a str,
     pub body: &'a str,
-    pub config: &'a MailConfig,
+    pub config: MailConfig,
 }
 
 impl<'a> Email<'a> {
     pub fn new(to: &'a str, subject: &'a str, body: &'a str) -> Self {
-        let config = &cfg::config().mail;
+        let config = cfg::config().mail.clone();
         Self {
             to,
             subject,

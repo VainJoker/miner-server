@@ -3,7 +3,6 @@ use std::sync::Arc;
 use axum::{extract::State, response::IntoResponse, Json};
 
 use crate::{
-    entity::bw_account,
     library::{
         crypto,
         error::{AppError::AuthError, AppResult, AuthInnerError},
@@ -17,6 +16,7 @@ use crate::{
             users::UserSchema,
         },
     },
+    models::bw_account,
 };
 
 pub async fn register_user_handler(
@@ -40,8 +40,11 @@ pub async fn register_user_handler(
         password: hashed_password,
     };
 
-    let user =
-        bw_account::BwAccount::create(state.get_db(), &new_bw_account).await?;
+    let user = bw_account::BwAccount::register_account(
+        state.get_db(),
+        &new_bw_account,
+    )
+    .await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -58,7 +61,6 @@ pub async fn login_user_handler(
         &body.email_or_name,
     )
     .await?;
-    // tracing::debug!(?users);
     if users.is_empty() {
         return Err(AuthError(AuthInnerError::WrongCredentials));
     }
@@ -83,7 +85,9 @@ pub async fn refresh_token_handler(
 
     let user = bw_account::BwAccount::fetch_user_by_account_id(
         state.get_db(),
-        &claims.uid,
+        (claims.uid)
+            .parse::<i64>()
+            .map_err(|_| AuthError(AuthInnerError::WrongCredentials))?,
     )
     .await?
     .ok_or(AuthError(AuthInnerError::WrongCredentials))?;

@@ -1,29 +1,29 @@
-use std::str::FromStr;
-
 use serde::{Deserialize, Serialize};
 use sqlx::{types::chrono::NaiveDateTime, PgPool};
-use uuid::Uuid;
 
 use crate::{
-    entity::types::{Currency, Language},
     library::error::InnerResult,
+    models::types::{AccountStatus, Currency, Language},
 };
 
 #[allow(dead_code)]
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct BwAccount {
-    pub id: i32,
-    pub account_id: Uuid,
+    pub account_id: i64,
     pub name: String,
     pub email: String,
     pub email_verified_at: Option<NaiveDateTime>,
     pub password: String,
+    pub failed_attempt: i32,
+    pub status: AccountStatus,
+    pub last_login: Option<NaiveDateTime>,
+
     pub local_currency: Currency,
     pub system_lang: Language,
-    pub registered_at: NaiveDateTime,
+
     pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -47,7 +47,7 @@ pub struct CreateBwAccountSchema {
 }
 
 impl BwAccount {
-    pub async fn create(
+    pub async fn register_account(
         db: &PgPool,
         new_bw_account: &CreateBwAccountSchema,
     ) -> InnerResult<Self> {
@@ -55,9 +55,10 @@ impl BwAccount {
             Self,
             r#"
                 INSERT INTO bw_account (name, email, password) VALUES ($1, $2, $3)
-                RETURNING id,account_id,name,email,email_verified_at,password,
-                    local_currency as "local_currency: _",system_lang as "system_lang: _",
-                    registered_at, created_at,updated_at
+                RETURNING account_id,name,email,email_verified_at,password,
+                local_currency as "local_currency: _",system_lang as "system_lang: _",
+                status as "status: _", failed_attempt, last_login,
+                created_at,updated_at
             "#,
             new_bw_account.name,
             new_bw_account.email,
@@ -66,22 +67,7 @@ impl BwAccount {
 
         Ok(map.fetch_one(db).await?)
     }
-    pub async fn read(db: &PgPool) -> InnerResult<Vec<Self>> {
-        let map = sqlx::query_as!(
-            Self,
-            r#"SELECT id,account_id,name,email,email_verified_at,password,
-            local_currency as "local_currency: _",system_lang as "system_lang: _",
-            registered_at, created_at,updated_at FROM bw_account"#
-        );
 
-        Ok(map.fetch_all(db).await?)
-    }
-    // fn update(db: &PgPool) {
-    //
-    // }
-    // fn delete(db: &PgPool) {
-    //
-    // }
     pub async fn check_user_exists_by_email(
         db: &PgPool,
         email: &str,
@@ -95,7 +81,7 @@ impl BwAccount {
 
     pub async fn check_user_exists_by_account_id(
         db: &PgPool,
-        account_id: &Uuid,
+        account_id: &i64,
     ) -> InnerResult<Option<bool>> {
         let map = sqlx::query_scalar!(
             "SELECT EXISTS(SELECT 1 FROM bw_account WHERE account_id = $1)",
@@ -110,9 +96,10 @@ impl BwAccount {
     ) -> InnerResult<Vec<Self>> {
         let map = sqlx::query_as!(
             Self,
-            r#"SELECT id,account_id,name,email,email_verified_at,password,
+            r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
-            registered_at, created_at,updated_at
+            status as "status: _", failed_attempt, last_login,
+            created_at,updated_at
             FROM bw_account WHERE name = $1 or email = $1"#,
             email_or_name
         );
@@ -121,14 +108,14 @@ impl BwAccount {
 
     pub async fn fetch_user_by_account_id(
         db: &PgPool,
-        account_id: &str,
+        account_id: i64,
     ) -> InnerResult<Option<Self>> {
-        let account_id = Uuid::from_str(account_id).unwrap();
         let map = sqlx::query_as!(
             Self,
-            r#"SELECT id,account_id,name,email,email_verified_at,password,
+            r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
-            registered_at, created_at,updated_at
+            status as "status: _", failed_attempt, last_login,
+            created_at,updated_at
             FROM bw_account WHERE account_id = $1"#,
             account_id
         );
@@ -141,9 +128,10 @@ impl BwAccount {
     ) -> InnerResult<Option<Self>> {
         let map = sqlx::query_as!(
             Self,
-            r#"SELECT id,account_id,name,email,email_verified_at,password,
+            r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
-            registered_at, created_at,updated_at
+            status as "status: _", failed_attempt, last_login,
+            created_at,updated_at
             FROM bw_account WHERE email = $1"#,
             email
         );
