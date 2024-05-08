@@ -33,8 +33,12 @@ impl<'a> Email<'a> {
 
     pub fn sync_send_text(&self) -> InnerResult<Response> {
         let message = Message::builder()
-            .from(self.config.username.parse().unwrap())
-            .to(self.to.parse().unwrap())
+            .from(self.config.username.parse().map_err(|e| {
+                anyhow::anyhow!("Error occurred while sending message: {}", e)
+            })?)
+            .to(self.to.parse().map_err(|e| {
+                anyhow::anyhow!("Error occurred while sending message: {}", e)
+            })?)
             .subject(self.subject)
             .header(ContentType::TEXT_PLAIN) // 如要发送 HTML 邮件，将这个换成 ContentType::TEXT_HTML
             .body(self.body.to_string())
@@ -55,8 +59,12 @@ impl<'a> Email<'a> {
 
     pub async fn async_send_text(&self) -> InnerResult<Response> {
         let message = Message::builder()
-            .from(self.config.username.parse().unwrap())
-            .to(self.to.parse().unwrap())
+            .from(self.config.username.parse().map_err(|e| {
+                anyhow::anyhow!("Error occurred while sending message: {}", e)
+            })?)
+            .to(self.to.parse().map_err(|e| {
+                anyhow::anyhow!("Error occurred while sending message: {}", e)
+            })?)
             .subject(self.subject)
             .header(ContentType::TEXT_PLAIN) // 如要发送 HTML 邮件，将这个换成 ContentType::TEXT_HTML
             .body(self.body.to_string())

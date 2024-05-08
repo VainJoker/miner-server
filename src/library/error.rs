@@ -88,17 +88,23 @@ impl AppError {
                 (StatusCode::UNPROCESSABLE_ENTITY, 20001)
             }
             Self::AuthError(e) => match e {
-                AuthInnerError::WrongCredentials => 
-                    (StatusCode::UNAUTHORIZED, 10001),
+                AuthInnerError::WrongCredentials => {
+                    (StatusCode::UNAUTHORIZED, 10001)
+                }
                 AuthInnerError::TokenCreation => (StatusCode::FORBIDDEN, 10002),
-                AuthInnerError::InvalidToken => 
-                    (StatusCode::UNAUTHORIZED, 10003),
-                AuthInnerError::UserAlreadyExists => 
-                    (StatusCode::CONFLICT, 10004),
-                AuthInnerError::MissingCredentials => 
-                    (StatusCode::UNAUTHORIZED, 10005),
+                AuthInnerError::InvalidToken => {
+                    (StatusCode::UNAUTHORIZED, 10003)
+                }
+                AuthInnerError::UserAlreadyExists => {
+                    (StatusCode::CONFLICT, 10004)
+                }
+                AuthInnerError::MissingCredentials => {
+                    (StatusCode::UNAUTHORIZED, 10005)
+                }
                 AuthInnerError::WrongCode => (StatusCode::UNAUTHORIZED, 10006),
-                AuthInnerError::AccountSuspended => (StatusCode::UNAUTHORIZED, 10006),
+                AuthInnerError::AccountSuspended => {
+                    (StatusCode::UNAUTHORIZED, 10006)
+                }
             },
             _ => (StatusCode::BAD_REQUEST, 99999),
         }

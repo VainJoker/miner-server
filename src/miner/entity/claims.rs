@@ -26,7 +26,7 @@ pub struct Claims {
 #[derive(Debug, Serialize)]
 pub enum TokenSchema {
     Verified(TokenSchemaResponse),
-    UnVerified(TokenSchemaResponse)
+    UnVerified(TokenSchemaResponse),
 }
 
 #[derive(Debug, Serialize)]
@@ -40,10 +40,10 @@ pub struct RefreshTokenSchema {
 }
 
 impl TokenSchema {
-    pub fn into_response(self) -> TokenSchemaResponse{
+    pub fn into_response(self) -> TokenSchemaResponse {
         match self {
             TokenSchema::Verified(res) => res,
-            TokenSchema::UnVerified(res) => res
+            TokenSchema::UnVerified(res) => res,
         }
     }
 }
@@ -187,17 +187,27 @@ impl Claims {
         Ok(token_data.claims)
     }
 
-    pub fn generate_token(credential: &str, status: bool) -> AppResult<TokenSchema> {
+    pub fn generate_token(
+        credential: &str,
+        status: bool,
+    ) -> AppResult<TokenSchema> {
         let access_token = Self::generate_access_token(credential)?;
         let basic_token = Self::generate_basic_token(credential)?;
         let refresh_token = Self::generate_refresh_token(credential)?;
         match status {
-            true => Ok(TokenSchema::Verified(TokenSchemaResponse { refresh_token,access_token})),
-            false => Ok(TokenSchema::UnVerified( TokenSchemaResponse { refresh_token, access_token: basic_token }))
+            true => Ok(TokenSchema::Verified(TokenSchemaResponse {
+                refresh_token,
+                access_token,
+            })),
+            false => Ok(TokenSchema::UnVerified(TokenSchemaResponse {
+                refresh_token,
+                access_token: basic_token,
+            })),
         }
     }
 
     pub fn parse_token(token: &str) -> AppResult<Self> {
-        Claims::parse_access_token(token).or_else(|_| Claims::parse_basic_token(token))
+        Claims::parse_access_token(token)
+            .or_else(|_| Claims::parse_basic_token(token))
     }
 }

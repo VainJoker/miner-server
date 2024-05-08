@@ -17,7 +17,6 @@ pub struct UserSchema {
 
 impl UserSchema {
     pub fn new(token: TokenSchema, user: BwAccount) -> Self {
-
         let token_response = token.into_response();
         Self {
             token: token_response,

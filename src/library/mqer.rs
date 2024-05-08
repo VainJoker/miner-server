@@ -1,7 +1,11 @@
 use std::{
     future::Future,
     pin::Pin,
-    sync::{atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst}, Arc }, time::{Duration, Instant},
+    sync::{
+        atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst},
+        Arc,
+    },
+    time::{Duration, Instant},
 };
 
 use deadpool_lapin::{
@@ -125,22 +129,21 @@ impl Mqer {
     }
 
     pub fn graceful_shutdown(&self) -> AppResult<()> {
+        self.running.store(false, SeqCst);
 
-    self.running.store(false, SeqCst);
+        let start = Instant::now();
 
-    let start = Instant::now();
-
-    while self.count.load(SeqCst) > 0 {
-        if start.elapsed() > Duration::from_secs(TIMEOUT) {
-            tracing::warn!("Graceful shutdown timed out, exiting."); 
-            break;
+        while self.count.load(SeqCst) > 0 {
+            if start.elapsed() > Duration::from_secs(TIMEOUT) {
+                tracing::warn!("Graceful shutdown timed out, exiting.");
+                break;
+            }
+            std::thread::sleep(tokio::time::Duration::from_secs(1));
         }
-        std::thread::sleep(tokio::time::Duration::from_secs(1));
-    }
 
-    tracing::info!("MQ Stopped");
-    Ok(())
-}
+        tracing::info!("MQ Stopped");
+        Ok(())
+    }
 
     pub async fn basic_send(
         &self,
@@ -341,8 +344,6 @@ mod tests {
     // use deadpool_lapin::lapin::{
     //     message::DeliveryResult, options::BasicAckOptions,
     // };
-
-    use std::sync::Arc;
 
     use crate::library::{cfg, mqer::Subscriber, Mqer};
 
