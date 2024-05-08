@@ -137,4 +137,28 @@ impl BwAccount {
         );
         Ok(map.fetch_optional(db).await?)
     }
+
+    pub async fn update_last_login(
+        db: &PgPool,
+        account_id: i64,
+    ) -> InnerResult<u64> {
+        let map = sqlx::query!(
+            r#"UPDATE bw_account set last_login = now()
+            WHERE account_id = $1"#,
+            account_id
+        );
+        Ok(map.execute(db).await?.rows_affected())
+    }
+
+    pub async fn update_email_verified_at(
+        db: &PgPool,
+        account_id: i64,
+    ) -> InnerResult<u64> {
+        let map = sqlx::query!(
+            r#"UPDATE bw_account set email_verified_at = now()
+            WHERE account_id = $1"#,
+            account_id
+        );
+        Ok(map.execute(db).await?.rows_affected())
+    }
 }

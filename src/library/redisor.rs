@@ -1,4 +1,5 @@
 use deadpool_redis::{Connection, Pool, Runtime};
+use redis::AsyncCommands;
 
 use crate::library::{
     cfg,
@@ -28,5 +29,52 @@ impl Redisor {
 
     pub async fn get_conn(&self) -> InnerResult<Redis> {
         Ok(self.pool.get().await.map_err(RedisorError::PoolError)?)
+    }
+
+    pub async fn get(&self, key: &str) -> InnerResult<Option<String>> {
+        let mut conn = self.get_conn().await?;
+        let result: Option<String> = conn.get(key).await.map_err(RedisorError::ExeError)?;
+        Ok(result)
+    }
+
+    pub async fn set(&self, key: &str, value: &str) -> InnerResult<()> {
+        let mut conn = self.get_conn().await?;
+        conn.set::<_, _, ()>(key, value).await.map_err(RedisorError::ExeError)?;
+        Ok(())
+    }
+
+    pub async fn del(&self, key: &str) -> InnerResult<()> {
+        let mut conn = self.get_conn().await?;
+        conn.del::<_, ()>(key).await.map_err(RedisorError::ExeError)?;
+        Ok(())
+    }
+
+    pub async fn set_ex(&self, key: &str, value: &str, ttl: u64) -> InnerResult<()> {
+        let mut conn = self.get_conn().await?;
+        conn.set_ex::<_, _, ()>(key, value, ttl).await.map_err(RedisorError::ExeError)?;
+        Ok(())
+    }
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use deadpool_redis::redis::cmd;
+
+    #[tokio::test]
+    async fn test_redisor_init() {
+        cfg::init(&"./fixtures/config.toml".to_string());
+        let redis_url = cfg::config().inpay.redis_url.clone();
+        let deadpool = deadpool_redis::Config::from_url(redis_url);
+        let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
+        let redisor = Redisor { pool };
+        let mut conn = redisor.get_conn().await.unwrap();
+        cmd("SET")
+            .arg(&["deadpool/test_key", "42"])
+            .query_async::<_, ()>(&mut conn)
+            .await.unwrap();
+        // conn.set("key","value").await.unwrap();
+        // assert_eq!(conn.get::<&str,String>("key").await.unwrap(), "value");
     }
 }

@@ -5,7 +5,7 @@ use axum::{extract::State, response::IntoResponse, Json};
 use crate::{
     library::{
         crypto,
-        error::{AppError::AuthError, AppResult, AuthInnerError},
+        error::{AppError::{self, AuthError}, AppResult, AuthInnerError},
         mailor::Email,
     },
     miner::{
@@ -67,7 +67,10 @@ pub async fn login_user_handler(
     for user in users {
         if crypto::verify_password(&user.password, &body.password)? {
             let token = Claims::generate_token(&user.email.to_string())?;
-
+            let affected = bw_account::BwAccount::update_last_login(state.get_db(),user.account_id).await?;
+            if affected != 1 {
+                tracing::error!("Failed to update last login time for user: {}", user.account_id);
+            }
             return Ok(SuccessResponse {
                 msg: "Tokens generated successfully",
                 data: Some(Json(UserSchema::new(token, user))),
@@ -113,12 +116,16 @@ pub async fn get_me_handler(
     })
 }
 
+// TODO: change this to service nmaed send_email_service then change the name of the function to send_verify_email_handler and add a new function named send_reset_password_email_handler
 pub async fn send_email_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
     let active_code = crypto::random_words(6);
     let body = format!("Active Code: {}", active_code);
+
+    state.redis.set_ex(&format!("{}_active_code",claims.uid), &active_code, 60).await?;
+
     let email = Email::new(&claims.uid, "Active your account", &body);
     let email_json = serde_json::to_string(&email).unwrap();
     state
@@ -131,3 +138,33 @@ pub async fn send_email_handler(
         data: None::<()>,
     })
 }
+
+
+pub async fn verify_email_handler(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Json(body): Json<String>,
+) -> AppResult<impl IntoResponse> {
+    let uid = claims.uid.parse::<i64>().map_err(|e| anyhow::anyhow!("Error occurs while verify email: {}",e))?;
+    if let Some(active_code_stored) = state.redis.get(&format!("{}_active_code",claims.uid)).await? {
+        if active_code_stored == body {
+            bw_account::BwAccount::update_email_verified_at(state.get_db(), uid).await?;
+            state.redis.del(&format!("{}_active_code",claims.uid)).await?;
+        } else {
+            return Err(AuthError(AuthInnerError::WrongCode));
+        }
+    } 
+
+    Ok(SuccessResponse {
+        msg: "success",
+        data: None::<()>,
+    })
+}
+
+// TODO: add reset password handler
+
+// pub async fn change_password_handler(
+//     State(state): State<Arc<AppState>>,
+//     claims: Claims,
+//     Json(body): Json<String>,
+// )

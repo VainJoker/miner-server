@@ -41,6 +41,14 @@ fn get_access_secret_expiration() -> i64 {
     cfg::config().inpay.access_secret_expiration.into()
 }
 
+fn get_refresh_secret<'a>() -> &'a [u8] {
+    cfg::config().inpay.refresh_secret.as_ref()
+}
+
+fn get_refresh_secret_expiration() -> i64 {
+    cfg::config().inpay.refresh_secret_expiration.into()
+}
+
 #[async_trait]
 impl<S> FromRequestParts<S> for Claims
 where
@@ -97,7 +105,7 @@ impl Claims {
 
     pub fn generate_refresh_token(credential: &str) -> AppResult<String> {
         let now = chrono::Utc::now();
-        let duration = get_access_secret_expiration();
+        let duration = get_refresh_secret_expiration();
         let claims = Self {
             uid: credential.to_string(),
             exp: (now + chrono::Duration::seconds(duration)).timestamp()
@@ -118,7 +126,7 @@ impl Claims {
     pub fn parse_refresh_token(token: &str) -> AppResult<Self> {
         let token_data = decode::<Self>(
             token,
-            &DecodingKey::from_secret(get_access_secret()),
+            &DecodingKey::from_secret(get_refresh_secret()),
             &Validation::default(),
         )
         .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;

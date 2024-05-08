@@ -1,7 +1,7 @@
 use std::{
     future::Future,
     pin::Pin,
-    sync::{Arc, Condvar, Mutex, RwLock},
+    sync::{atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst}, Arc }, time::{Duration, Instant},
 };
 
 use deadpool_lapin::{
@@ -24,11 +24,13 @@ use crate::library::{
 };
 
 pub type MQ = Object;
+const TIMEOUT: u64 = 5;
+
 #[derive(Clone)]
 pub struct Mqer {
     pub pool: deadpool_lapin::Pool,
-    pub running: Arc<RwLock<bool>>,
-    pub count: Arc<(Mutex<usize>, Condvar)>,
+    pub running: Arc<AtomicBool>,
+    pub count: Arc<AtomicUsize>,
 }
 
 #[derive(Clone)]
@@ -58,20 +60,20 @@ impl ConsumerDelegate for Subscriber {
         let mqer_cloned = Arc::clone(&self.mqer);
         Box::pin(async move {
             if let Ok(Some(delivery)) = delivery {
-                {
-                    mqer_cloned.increase_count();
-                }
-                if !mqer_cloned.running.read().map_or(false, |r| *r) {
+                mqer_cloned.increase_count();
+                if !mqer_cloned.running.load(SeqCst) {
                     return;
                 }
+
+                // if !mqer_cloned.running.read().map_or(false, |r| *r) {
+                //     return;
+                // }
                 let message = String::from_utf8_lossy(&delivery.data);
                 (func_cloned)(message.to_string());
                 if let Err(e) = delivery.ack(BasicAckOptions::default()).await {
                     tracing::error!("Failed to acknowledge message: {:?}", e);
                 }
-                {
-                    mqer_cloned.decrease_count();
-                }
+                mqer_cloned.decrease_count();
             } else {
                 tracing::error!("Failed to consume queue message");
             };
@@ -91,11 +93,10 @@ impl Mqer {
         match deadpool.create_pool(Some(Runtime::Tokio1)) {
             Ok(pool) => {
                 tracing::info!("🚀 Connection to the mq is successful!");
-                let running = Arc::new(RwLock::new(true));
                 Self {
                     pool,
-                    running,
-                    count: Arc::new((Mutex::new(0), Condvar::default())),
+                    running: Arc::new(AtomicBool::new(true)),
+                    count: Arc::new(AtomicUsize::new(0)),
                 }
             }
             Err(err) => {
@@ -106,83 +107,40 @@ impl Mqer {
 
     pub async fn get_conn(&self) -> InnerResult<Option<MQ>> {
         // This block makes sure we release the lock before the async function.
-        {
-            self.increase_count()
-        }
+        self.increase_count();
 
-        if let Ok(is_running) = self.running.read() {
-            if !*is_running {
-                return Ok(None);
-            }
+        if !self.running.load(SeqCst) {
+            return Ok(None);
         }
 
         Ok(Some(self.pool.get().await.map_err(MqerError::PoolError)?))
     }
 
     fn decrease_count(&self) {
-        let (lock, cvar) = &*self.count;
-        match lock.lock() {
-            Ok(mut count) => {
-                *count -= 1;
-                // 如果 count 变为0，我们唤醒等待它的线程
-                if *count == 0 {
-                    cvar.notify_all();
-                }
-            }
-            Err(e) => {
-                tracing::error!(
-                    "Failed to acquire lock in decrease_count: {}",
-                    e
-                );
-            }
-        }
+        self.count.fetch_sub(1, SeqCst);
     }
 
     fn increase_count(&self) {
-        let (lock, _) = &*self.count;
-        match lock.lock() {
-            Ok(mut count) => {
-                *count += 1;
-            }
-            Err(e) => {
-                tracing::error!(
-                    "Failed to acquire lock in increase_count: {}",
-                    e
-                );
-            }
-        }
+        self.count.fetch_add(1, SeqCst);
     }
 
     pub fn graceful_shutdown(&self) -> AppResult<()> {
-        let mut running = self.running.write().map_err(|e| {
-            anyhow::anyhow!(
-                "Failed to acquire lock in graceful_shutdown: {}",
-                e
-            )
-        })?;
-        *running = false;
-        let (lock, cvar) = &*self.count;
-        let mut count = lock.lock().map_err(|e| {
-            anyhow::anyhow!(
-                "Failed to acquire lock in graceful_shutdown: {}",
-                e
-            )
-        })?;
-        let timeout = tokio::time::Duration::from_secs(10);
-        while *count > 0 {
-            let result = cvar.wait_timeout(count, timeout).unwrap();
-            count = result.0;
-            if result.1.timed_out() {
-                tracing::warn!(
-                    "Waited for 10 seconds but count is still not zero, aborting..."
-                );
-                return Ok(());
-            }
-        }
 
-        tracing::info!("MQ Stopped");
-        Ok(())
+    self.running.store(false, SeqCst);
+
+    let start = Instant::now();
+
+    while self.count.load(SeqCst) > 0 {
+        if start.elapsed() > Duration::from_secs(TIMEOUT) {
+            tracing::warn!("Graceful shutdown timed out, exiting."); 
+            break;
+        }
+        std::thread::sleep(tokio::time::Duration::from_secs(1));
     }
+
+    tracing::info!("MQ Stopped");
+    Ok(())
+}
 
     pub async fn basic_send(
         &self,
@@ -383,6 +341,8 @@ mod tests {
     // use deadpool_lapin::lapin::{
     //     message::DeliveryResult, options::BasicAckOptions,
     // };
+
+    use std::sync::Arc;
 
     use crate::library::{cfg, mqer::Subscriber, Mqer};
 
