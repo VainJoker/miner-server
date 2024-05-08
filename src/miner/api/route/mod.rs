@@ -9,7 +9,7 @@ use tower_http::timeout::TimeoutLayer;
 
 use super::{
     controller::handler_404,
-    middleware::{auth, cors, log, req_id},
+    middleware::{auth, basic_auth, cors, log, req_id},
 };
 use crate::miner::{
     api::controller::v1::account::{
@@ -20,20 +20,21 @@ use crate::miner::{
 };
 
 pub fn init(inpay_state: Arc<AppState>) -> Router {
-    // 开放
     let open = Router::new()
         .route("/auth/login", post(login_user_handler))
         .route("/auth/register", post(register_user_handler));
 
-    // 需授权
-    let auth = Router::new()
+    let basic = Router::new()
         .route("/users/me", post(get_me_handler))
+        .layer(from_fn(basic_auth::handle));
+
+    let auth = Router::new()
         .route("/users/send_email", post(send_email_handler))
         .route_layer(from_fn_with_state(inpay_state.clone(), auth::handle))
         .with_state(inpay_state.clone());
 
     Router::new()
-        .nest("/api/v1", open.merge(auth))
+        .nest("/api/v1", open.merge(basic).merge(auth))
         .fallback(handler_404)
         .with_state(inpay_state)
         .layer(TimeoutLayer::new(Duration::from_secs(30)))

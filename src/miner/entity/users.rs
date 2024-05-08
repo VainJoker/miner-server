@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use super::claims::TokenSchema;
+use super::claims::{TokenSchema, TokenSchemaResponse};
 use crate::models::{
     bw_account::BwAccount,
     types::{Currency, Language},
@@ -8,7 +8,7 @@ use crate::models::{
 
 #[derive(Debug, Serialize)]
 pub struct UserSchema {
-    pub token: TokenSchema,
+    pub token: TokenSchemaResponse,
     pub name: String,
     pub email: String,
     pub local_currency: Currency,
@@ -17,8 +17,10 @@ pub struct UserSchema {
 
 impl UserSchema {
     pub fn new(token: TokenSchema, user: BwAccount) -> Self {
+
+        let token_response = token.into_response();
         Self {
-            token,
+            token: token_response,
             name: user.name,
             email: user.email,
             local_currency: user.local_currency,

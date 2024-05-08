@@ -5,7 +5,7 @@ use axum::{extract::State, response::IntoResponse, Json};
 use crate::{
     library::{
         crypto,
-        error::{AppError::{self, AuthError}, AppResult, AuthInnerError},
+        error::{AppError::AuthError, AppResult, AuthInnerError},
         mailor::Email,
     },
     miner::{
@@ -16,7 +16,7 @@ use crate::{
             users::UserSchema,
         },
     },
-    models::bw_account,
+    models::{bw_account, types::AccountStatus},
 };
 
 pub async fn register_user_handler(
@@ -66,7 +66,12 @@ pub async fn login_user_handler(
     }
     for user in users {
         if crypto::verify_password(&user.password, &body.password)? {
-            let token = Claims::generate_token(&user.email.to_string())?;
+            let status = match user.status {
+                AccountStatus::Active => true,
+                AccountStatus::Inactive => false,
+                AccountStatus::Suspend => return Err(AuthError(AuthInnerError::AccountSuspended)),
+            };
+            let token = Claims::generate_token(&user.email.to_string(),status)?;
             let affected = bw_account::BwAccount::update_last_login(state.get_db(),user.account_id).await?;
             if affected != 1 {
                 tracing::error!("Failed to update last login time for user: {}", user.account_id);
@@ -95,11 +100,17 @@ pub async fn refresh_token_handler(
     .await?
     .ok_or(AuthError(AuthInnerError::WrongCredentials))?;
 
-    let token = Claims::generate_token(&user.email.to_string())?;
+    let status = match user.status {
+        AccountStatus::Active => true,
+        AccountStatus::Inactive => false,
+        AccountStatus::Suspend => return Err(AuthError(AuthInnerError::AccountSuspended)),
+    };
+    let token = Claims::generate_token(&user.email.to_string(),status)?;
+    let token_response = token.into_response();
 
     Ok(SuccessResponse {
         msg: "Tokens refreshed successfully",
-        data: Some(Json(token)),
+        data: Some(Json(token_response)),
     })
 }
 

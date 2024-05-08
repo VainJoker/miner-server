@@ -47,8 +47,10 @@ pub struct InpayConfig {
     pub redis_url: String,
     pub mq_url: String,
     pub access_secret: String,
+    pub basic_secret: String,
     pub refresh_secret: String,
     pub access_secret_expiration: u32,
+    pub basic_secret_expiration: u32,
     pub refresh_secret_expiration: u32,
 }
 

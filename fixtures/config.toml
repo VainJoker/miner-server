@@ -9,6 +9,8 @@ access_secret= "access_secret"
 access_secret_expiration= 86400
 refresh_secret= "refresh_secret"
 refresh_secret_expiration= 7776000
+basic_secret= "basic_secret"
+basic_secret_expiration= 86400
 
 [log]
 mine_target = "miner_server"
