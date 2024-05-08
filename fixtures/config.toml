@@ -5,12 +5,18 @@ port = 8080
 db_url = "postgres://VJ:123qwe@localhost/miner"
 redis_url = "redis://localhost"
 mq_url = "amqp://VJ:123qwe@localhost:5672"
-access_secret= "access_secret"
-access_secret_expiration= 86400
-refresh_secret= "refresh_secret"
-refresh_secret_expiration= 7776000
-basic_secret= "basic_secret"
-basic_secret_expiration= 86400
+
+[inpay.access_token]
+secret = "your_access_token_secret"
+secret_expiration = 3600
+
+[inpay.basic_token]
+secret = "your_basic_token_secret"
+secret_expiration = 3600
+
+[inpay.refresh_token]
+secret = "your_refresh_token_secret"
+secret_expiration = 7200
 
 [log]
 mine_target = "miner_server"

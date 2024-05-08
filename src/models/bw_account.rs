@@ -40,6 +40,12 @@ pub struct LoginUserSchema {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct ResetPasswordSchema {
+    pub account_id: i64,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct CreateBwAccountSchema {
     pub name: String,
     pub email: String,
@@ -54,11 +60,11 @@ impl BwAccount {
         let map = sqlx::query_as!(
             Self,
             r#"
-                INSERT INTO bw_account (name, email, password) VALUES ($1, $2, $3)
-                RETURNING account_id,name,email,email_verified_at,password,
-                local_currency as "local_currency: _",system_lang as "system_lang: _",
-                status as "status: _", failed_attempt, last_login,
-                created_at,updated_at
+            INSERT INTO bw_account (name, email, password) VALUES ($1, $2, $3)
+            RETURNING account_id,name,email,email_verified_at,password,
+            local_currency as "local_currency: _",system_lang as "system_lang: _",
+            status as "status: _", failed_attempt, last_login,
+            created_at,updated_at
             "#,
             new_bw_account.name,
             new_bw_account.email,
@@ -158,6 +164,19 @@ impl BwAccount {
             r#"UPDATE bw_account set email_verified_at = now()
             WHERE account_id = $1"#,
             account_id
+        );
+        Ok(map.execute(db).await?.rows_affected())
+    }
+
+    pub async fn update_password_by_account_id(
+        db: &PgPool,
+        reset_password: &ResetPasswordSchema,
+    ) -> InnerResult<u64> {
+        let map = sqlx::query!(
+            r#"UPDATE bw_account set password = $1
+            WHERE account_id = $2"#,
+            reset_password.password,
+            reset_password.account_id
         );
         Ok(map.execute(db).await?.rows_affected())
     }

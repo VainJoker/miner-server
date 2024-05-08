@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     library::{error::AppResult, mailor::Email, mqer::Subscriber},
     miner::bootstrap::{
-        constants::{SEND_EMAIL_QUEUE, SEND_EMAIL_TAG},
+        constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
         AppState,
     },
 };
@@ -39,7 +39,7 @@ impl MqCustomer {
         };
         let delegate = Subscriber::new(func, mqer.clone());
         Ok(mqer
-            .basic_receive(SEND_EMAIL_QUEUE, SEND_EMAIL_TAG, delegate)
+            .basic_receive(MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG, delegate)
             .await?)
     }
 }

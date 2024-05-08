@@ -1,3 +1,5 @@
+use std::sync::{Arc, OnceLock};
+
 use axum::{
     async_trait, extract::FromRequestParts, http::request::Parts,
     RequestPartsExt,
@@ -18,58 +20,123 @@ use crate::library::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub uid: String,
+    pub uid: i64,
+    pub email: String,
     pub iat: usize,
     pub exp: usize,
 }
 
-#[derive(Debug, Serialize)]
-pub enum TokenSchema {
-    Verified(TokenSchemaResponse),
-    UnVerified(TokenSchemaResponse),
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserInfo {
+    pub uid: i64,
+    pub email: String,
 }
 
 #[derive(Debug, Serialize)]
-pub struct TokenSchemaResponse {
+pub enum Token {
+    Verified(TokenSchema),
+    UnVerified(TokenSchema),
+}
+
+#[derive(Debug, Serialize)]
+pub struct TokenSchema {
     pub refresh_token: String,
     pub access_token: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RefreshTokenSchema {
     pub refresh_token: String,
 }
 
-impl TokenSchema {
-    pub fn into_response(self) -> TokenSchemaResponse {
-        match self {
-            TokenSchema::Verified(res) => res,
-            TokenSchema::UnVerified(res) => res,
+pub struct TokenSecretInfo<'a> {
+    secret: &'a [u8],
+    expiration: i64,
+}
+
+impl<'a> TokenSecretInfo<'a> {
+    fn new(token_type: TokenType) -> Self {
+        Self {
+            secret: Self::get_secret(token_type),
+            expiration: Self::get_secret_expiration(token_type),
+        }
+    }
+
+    fn get_secret(token_type: TokenType) -> &'a [u8] {
+        match token_type {
+            TokenType::ACCESS => {
+                cfg::config().inpay.access_token.secret.as_ref()
+            }
+            TokenType::BASIC => cfg::config().inpay.basic_token.secret.as_ref(),
+            TokenType::REFRESH => {
+                cfg::config().inpay.refresh_token.secret.as_ref()
+            }
+        }
+    }
+
+    fn get_secret_expiration(token_type: TokenType) -> i64 {
+        match token_type {
+            TokenType::ACCESS => {
+                cfg::config().inpay.access_token.secret_expiration.into()
+            }
+            TokenType::BASIC => {
+                cfg::config().inpay.basic_token.secret_expiration.into()
+            }
+            TokenType::REFRESH => {
+                cfg::config().inpay.refresh_token.secret_expiration.into()
+            }
         }
     }
 }
 
-fn get_access_secret<'a>() -> &'a [u8] {
-    cfg::config().inpay.access_secret.as_ref()
+static ACCESS_INFO: OnceLock<Arc<TokenSecretInfo<'static>>> = OnceLock::new();
+static BASIC_INFO: OnceLock<Arc<TokenSecretInfo<'static>>> = OnceLock::new();
+static REFRESH_INFO: OnceLock<Arc<TokenSecretInfo<'static>>> = OnceLock::new();
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum TokenType {
+    ACCESS,
+    BASIC,
+    REFRESH,
 }
 
-fn get_access_secret_expiration() -> i64 {
-    cfg::config().inpay.access_secret_expiration.into()
+pub trait TokenAuth {
+    fn generate_token(&self, credential: &UserInfo) -> AppResult<String>;
+    fn parse_token(&self, token: &str) -> AppResult<Claims>;
 }
 
-fn get_basic_secret<'a>() -> &'a [u8] {
-    cfg::config().inpay.basic_secret.as_ref()
-}
+impl TokenAuth for TokenSecretInfo<'_> {
+    fn generate_token(&self, credential: &UserInfo) -> AppResult<String> {
+        let now = chrono::Utc::now();
+        let duration = self.expiration;
+        let claims = Claims {
+            uid: credential.uid,
+            email: credential.email.clone(),
+            exp: (now + chrono::Duration::seconds(duration)).timestamp()
+                as usize,
+            iat: now.timestamp() as usize,
+        };
 
-fn get_basic_secret_expiration() -> i64 {
-    cfg::config().inpay.basic_secret_expiration.into()
-}
+        let token = encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(self.secret),
+        )
+        .map_err(|_| AppError::AuthError(AuthInnerError::TokenCreation))?;
 
-fn get_refresh_secret<'a>() -> &'a [u8] {
-    cfg::config().inpay.refresh_secret.as_ref()
-}
+        Ok(token)
+    }
 
-fn get_refresh_secret_expiration() -> i64 {
-    cfg::config().inpay.refresh_secret_expiration.into()
+    fn parse_token(&self, token: &str) -> AppResult<Claims> {
+        let token_data = decode::<Claims>(
+            token,
+            &DecodingKey::from_secret(self.secret),
+            &Validation::default(),
+        )
+        .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;
+
+        Ok(token_data.claims)
+    }
 }
 
 #[async_trait]
@@ -88,126 +155,57 @@ where
             .await
             .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;
 
-        let claims = Self::parse_token(bearer.token())?;
+        let claims = Self::parse_token(bearer.token(), TokenType::ACCESS)
+            .or_else(|_| Self::parse_token(bearer.token(), TokenType::BASIC))?;
 
         Ok(claims)
     }
 }
 
 impl Claims {
-    pub fn generate_access_token(credential: &str) -> AppResult<String> {
-        let now = chrono::Utc::now();
-        let duration = get_access_secret_expiration();
-        let claims = Self {
-            uid: credential.to_string(),
-            exp: (now + chrono::Duration::seconds(duration)).timestamp()
-                as usize,
-            iat: now.timestamp() as usize,
-        };
-
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(get_access_secret()),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::TokenCreation))?;
-
-        Ok(token)
-    }
-
-    pub fn parse_access_token(token: &str) -> AppResult<Self> {
-        let token_data = decode::<Self>(
-            token,
-            &DecodingKey::from_secret(get_access_secret()),
-            &Validation::default(),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;
-
-        Ok(token_data.claims)
-    }
-
-    pub fn generate_basic_token(credential: &str) -> AppResult<String> {
-        let now = chrono::Utc::now();
-        let duration = get_basic_secret_expiration();
-        let claims = Self {
-            uid: credential.to_string(),
-            exp: (now + chrono::Duration::seconds(duration)).timestamp()
-                as usize,
-            iat: now.timestamp() as usize,
-        };
-
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(get_basic_secret()),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::TokenCreation))?;
-
-        Ok(token)
-    }
-
-    pub fn parse_basic_token(token: &str) -> AppResult<Self> {
-        let token_data = decode::<Self>(
-            token,
-            &DecodingKey::from_secret(get_basic_secret()),
-            &Validation::default(),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;
-        Ok(token_data.claims)
-    }
-
-    pub fn generate_refresh_token(credential: &str) -> AppResult<String> {
-        let now = chrono::Utc::now();
-        let duration = get_refresh_secret_expiration();
-        let claims = Self {
-            uid: credential.to_string(),
-            exp: (now + chrono::Duration::seconds(duration)).timestamp()
-                as usize,
-            iat: now.timestamp() as usize,
-        };
-
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(get_access_secret()),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::TokenCreation))?;
-
-        Ok(token)
-    }
-
-    pub fn parse_refresh_token(token: &str) -> AppResult<Self> {
-        let token_data = decode::<Self>(
-            token,
-            &DecodingKey::from_secret(get_refresh_secret()),
-            &Validation::default(),
-        )
-        .map_err(|_| AppError::AuthError(AuthInnerError::InvalidToken))?;
-
-        Ok(token_data.claims)
-    }
-
-    pub fn generate_token(
-        credential: &str,
-        status: bool,
+    pub fn generate_tokens(
+        credential: &UserInfo,
+        token_type: TokenType,
     ) -> AppResult<TokenSchema> {
-        let access_token = Self::generate_access_token(credential)?;
-        let basic_token = Self::generate_basic_token(credential)?;
-        let refresh_token = Self::generate_refresh_token(credential)?;
-        match status {
-            true => Ok(TokenSchema::Verified(TokenSchemaResponse {
+        let access_info = ACCESS_INFO
+            .get_or_init(|| Arc::new(TokenSecretInfo::new(TokenType::ACCESS)));
+        let basic_info = BASIC_INFO
+            .get_or_init(|| Arc::new(TokenSecretInfo::new(TokenType::BASIC)));
+        let refresh_info = REFRESH_INFO
+            .get_or_init(|| Arc::new(TokenSecretInfo::new(TokenType::REFRESH)));
+
+        let access_token = access_info.generate_token(credential)?;
+        let basic_token = basic_info.generate_token(credential)?;
+        let refresh_token = refresh_info.generate_token(credential)?;
+
+        let result_token = match token_type {
+            TokenType::ACCESS => TokenSchema {
                 refresh_token,
                 access_token,
-            })),
-            false => Ok(TokenSchema::UnVerified(TokenSchemaResponse {
+            },
+            TokenType::BASIC => TokenSchema {
                 refresh_token,
                 access_token: basic_token,
-            })),
-        }
+            },
+            TokenType::REFRESH => {
+                return Err(AppError::AuthError(
+                    AuthInnerError::InvalidTokenType,
+                ));
+            }
+        };
+
+        Ok(result_token)
     }
 
-    pub fn parse_token(token: &str) -> AppResult<Self> {
-        Claims::parse_access_token(token)
-            .or_else(|_| Claims::parse_basic_token(token))
+    pub fn parse_token(token: &str, token_type: TokenType) -> AppResult<Self> {
+        let info = match token_type {
+            TokenType::ACCESS => ACCESS_INFO
+                .get_or_init(|| Arc::new(TokenSecretInfo::new(token_type))),
+            TokenType::BASIC => BASIC_INFO
+                .get_or_init(|| Arc::new(TokenSecretInfo::new(token_type))),
+            TokenType::REFRESH => REFRESH_INFO
+                .get_or_init(|| Arc::new(TokenSecretInfo::new(token_type))),
+        };
+        info.parse_token(token)
     }
 }

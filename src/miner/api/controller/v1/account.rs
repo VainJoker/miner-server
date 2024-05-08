@@ -9,14 +9,20 @@ use crate::{
         mailor::Email,
     },
     miner::{
-        bootstrap::{constants::SEND_EMAIL_QUEUE, AppState},
-        entity::{
-            claims::{Claims, RefreshTokenSchema},
-            common::SuccessResponse,
-            users::UserSchema,
+        bootstrap::{
+            constants::{self, MQ_SEND_EMAIL_QUEUE},
+            AppState,
         },
+        entity::{
+            account::{
+                ActiveAccountRequest, LoginResponse, ResetPasswordRequest,
+            },
+            claims::{Claims, RefreshTokenSchema, TokenType},
+            common::SuccessResponse,
+        },
+        service::token_generator,
     },
-    models::{bw_account, types::AccountStatus},
+    models::bw_account,
 };
 
 pub async fn register_user_handler(
@@ -66,15 +72,8 @@ pub async fn login_user_handler(
     }
     for user in users {
         if crypto::verify_password(&user.password, &body.password)? {
-            let status = match user.status {
-                AccountStatus::Active => true,
-                AccountStatus::Inactive => false,
-                AccountStatus::Suspend => {
-                    return Err(AuthError(AuthInnerError::AccountSuspended));
-                }
-            };
             let token =
-                Claims::generate_token(&user.email.to_string(), status)?;
+                token_generator::generate_tokens_for_user(&user).await?;
             let affected = bw_account::BwAccount::update_last_login(
                 state.get_db(),
                 user.account_id,
@@ -88,7 +87,7 @@ pub async fn login_user_handler(
             }
             return Ok(SuccessResponse {
                 msg: "Tokens generated successfully",
-                data: Some(Json(UserSchema::new(token, user))),
+                data: Some(Json(LoginResponse::new(token, user))),
             });
         }
     }
@@ -99,30 +98,20 @@ pub async fn refresh_token_handler(
     State(state): State<Arc<AppState>>,
     Json(body): Json<RefreshTokenSchema>,
 ) -> AppResult<impl IntoResponse> {
-    let claims = Claims::parse_refresh_token(&body.refresh_token)?;
+    let claims = Claims::parse_token(&body.refresh_token, TokenType::REFRESH)?;
 
     let user = bw_account::BwAccount::fetch_user_by_account_id(
         state.get_db(),
-        (claims.uid)
-            .parse::<i64>()
-            .map_err(|_| AuthError(AuthInnerError::WrongCredentials))?,
+        claims.uid,
     )
     .await?
     .ok_or(AuthError(AuthInnerError::WrongCredentials))?;
 
-    let status = match user.status {
-        AccountStatus::Active => true,
-        AccountStatus::Inactive => false,
-        AccountStatus::Suspend => {
-            return Err(AuthError(AuthInnerError::AccountSuspended));
-        }
-    };
-    let token = Claims::generate_token(&user.email.to_string(), status)?;
-    let token_response = token.into_response();
+    let token = token_generator::generate_tokens_for_user(&user).await?;
 
     Ok(SuccessResponse {
         msg: "Tokens refreshed successfully",
-        data: Some(Json(token_response)),
+        data: Some(Json(token)),
     })
 }
 
@@ -130,19 +119,18 @@ pub async fn get_me_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
-    let user =
-        bw_account::BwAccount::fetch_user_by_email(state.get_db(), &claims.uid)
-            .await?;
+    let user = bw_account::BwAccount::fetch_user_by_email(
+        state.get_db(),
+        &claims.email,
+    )
+    .await?;
     Ok(SuccessResponse {
         msg: "success",
         data: Some(Json(user)),
     })
 }
 
-// TODO: change this to service nmaed send_email_service then change the name of
-// the function to send_verify_email_handler and add a new function named
-// send_reset_password_email_handler
-pub async fn send_email_handler(
+pub async fn send_active_account_email_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
@@ -151,16 +139,20 @@ pub async fn send_email_handler(
 
     state
         .redis
-        .set_ex(&format!("{}_active_code", claims.uid), &active_code, 60)
+        .set_ex(
+            &format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY),
+            &active_code,
+            60,
+        )
         .await?;
 
-    let email = Email::new(&claims.uid, "Active your account", &body);
+    let email = Email::new(&claims.email, "Active your account", &body);
     let email_json = serde_json::to_string(&email).map_err(|e| {
         anyhow::anyhow!("Error occurred while sending email: {}", e)
     })?;
     state
         .get_mq()?
-        .basic_send(SEND_EMAIL_QUEUE, &email_json)
+        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
         .await?;
 
     Ok(SuccessResponse {
@@ -169,29 +161,52 @@ pub async fn send_email_handler(
     })
 }
 
-pub async fn verify_email_handler(
+pub async fn send_reset_password_email_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
-    Json(body): Json<String>,
 ) -> AppResult<impl IntoResponse> {
-    let uid = claims.uid.parse::<i64>().map_err(|e| {
-        anyhow::anyhow!("Error occurs while verify email: {}", e)
-    })?;
-    if let Some(active_code_stored) = state
+    let reset_password_code = crypto::random_words(6);
+    let body = format!("ResetPassword Code: {}", reset_password_code);
+
+    state
         .redis
-        .get(&format!("{}_active_code", claims.uid))
-        .await?
-    {
-        if active_code_stored == body {
+        .set_ex(
+            &format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY),
+            &reset_password_code,
+            60,
+        )
+        .await?;
+
+    let email = Email::new(&claims.email, "Reset Password", &body);
+    let email_json = serde_json::to_string(&email).map_err(|e| {
+        anyhow::anyhow!("Error occurred while sending email: {}", e)
+    })?;
+    state
+        .get_mq()?
+        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
+        .await?;
+
+    Ok(SuccessResponse {
+        msg: "success",
+        data: None::<()>,
+    })
+}
+
+pub async fn verify_active_account_code_handler(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Json(body): Json<ActiveAccountRequest>,
+) -> AppResult<impl IntoResponse> {
+    let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
+
+    if let Some(active_code_stored) = state.redis.get(&key).await? {
+        if active_code_stored == body.code {
             bw_account::BwAccount::update_email_verified_at(
                 state.get_db(),
-                uid,
+                claims.uid,
             )
             .await?;
-            state
-                .redis
-                .del(&format!("{}_active_code", claims.uid))
-                .await?;
+            state.redis.del(&key).await?;
         } else {
             return Err(AuthError(AuthInnerError::WrongCode));
         }
@@ -203,10 +218,38 @@ pub async fn verify_email_handler(
     })
 }
 
-// TODO: add reset password handler
+pub async fn change_password_handler(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    Json(body): Json<ResetPasswordRequest>,
+) -> AppResult<impl IntoResponse> {
+    let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
 
-// pub async fn change_password_handler(
-//     State(state): State<Arc<AppState>>,
-//     claims: Claims,
-//     Json(body): Json<String>,
-// )
+    if let Some(active_code_stored) = state.redis.get(&key).await? {
+        if active_code_stored == body.code {
+            bw_account::BwAccount::update_email_verified_at(
+                state.get_db(),
+                claims.uid,
+            )
+            .await?;
+            state.redis.del(&key).await?;
+        } else {
+            return Err(AuthError(AuthInnerError::WrongCode));
+        }
+    }
+
+    let reset_password = bw_account::ResetPasswordSchema {
+        account_id: claims.uid,
+        password: crypto::hash_password(body.password.as_bytes())?,
+    };
+    bw_account::BwAccount::update_password_by_account_id(
+        state.get_db(),
+        &reset_password,
+    )
+    .await?;
+
+    Ok(SuccessResponse {
+        msg: "success",
+        data: None::<()>,
+    })
+}

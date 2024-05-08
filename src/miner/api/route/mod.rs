@@ -8,13 +8,20 @@ use axum::{
 use tower_http::timeout::TimeoutLayer;
 
 use super::{
-    controller::handler_404,
+    controller::{
+        handler_404,
+        v1::account::{
+            change_password_handler, refresh_token_handler,
+            send_reset_password_email_handler,
+            verify_active_account_code_handler,
+        },
+    },
     middleware::{auth, basic_auth, cors, log, req_id},
 };
 use crate::miner::{
     api::controller::v1::account::{
         get_me_handler, login_user_handler, register_user_handler,
-        send_email_handler,
+        send_active_account_email_handler,
     },
     bootstrap::AppState,
 };
@@ -25,11 +32,27 @@ pub fn init(inpay_state: Arc<AppState>) -> Router {
         .route("/auth/register", post(register_user_handler));
 
     let basic = Router::new()
-        .route("/users/me", post(get_me_handler))
+        .route("/users/refresh_token", post(refresh_token_handler))
+        .route(
+            "/users/send_active",
+            post(send_active_account_email_handler),
+        )
+        .route(
+            "/users/verify_active",
+            post(verify_active_account_code_handler),
+        )
+        .route(
+            "/users/send_reset_password",
+            post(send_reset_password_email_handler),
+        )
+        .route(
+            "/users/verify_reset_password",
+            post(change_password_handler),
+        )
         .layer(from_fn(basic_auth::handle));
 
     let auth = Router::new()
-        .route("/users/send_email", post(send_email_handler))
+        .route("/users/get_me", post(get_me_handler))
         .route_layer(from_fn_with_state(inpay_state.clone(), auth::handle))
         .with_state(inpay_state.clone());
 

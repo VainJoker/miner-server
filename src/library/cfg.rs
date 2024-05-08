@@ -38,6 +38,12 @@ pub struct MailConfig {
     pub host: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct JWTConfig {
+    pub secret: String,
+    pub secret_expiration: u32,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct InpayConfig {
     pub env: String,
@@ -46,12 +52,9 @@ pub struct InpayConfig {
     pub db_url: String,
     pub redis_url: String,
     pub mq_url: String,
-    pub access_secret: String,
-    pub basic_secret: String,
-    pub refresh_secret: String,
-    pub access_secret_expiration: u32,
-    pub basic_secret_expiration: u32,
-    pub refresh_secret_expiration: u32,
+    pub access_token: JWTConfig,
+    pub basic_token: JWTConfig,
+    pub refresh_token: JWTConfig,
 }
 
 /// Initializes the application's configuration from the provided file.

@@ -79,6 +79,8 @@ pub enum AuthInnerError {
     WrongCode,
     #[error("AccountSuspended")]
     AccountSuspended,
+    #[error("InvalidTokenType")]
+    InvalidTokenType,
 }
 
 impl AppError {
@@ -103,6 +105,9 @@ impl AppError {
                 }
                 AuthInnerError::WrongCode => (StatusCode::UNAUTHORIZED, 10006),
                 AuthInnerError::AccountSuspended => {
+                    (StatusCode::UNAUTHORIZED, 10006)
+                }
+                AuthInnerError::InvalidTokenType => {
                     (StatusCode::UNAUTHORIZED, 10006)
                 }
             },

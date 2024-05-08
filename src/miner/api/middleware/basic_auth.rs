@@ -5,7 +5,7 @@ use axum::{
 
 use crate::{
     library::error::{AppError::AuthError, AppResult, AuthInnerError},
-    miner::entity::claims::Claims,
+    miner::entity::claims::{Claims, TokenType},
 };
 
 pub async fn handle(request: Request, next: Next) -> AppResult<Response> {
@@ -16,7 +16,7 @@ pub async fn handle(request: Request, next: Next) -> AppResult<Response> {
         .and_then(|auth_value| auth_value.strip_prefix("Bearer "))
         .ok_or(AuthError(AuthInnerError::InvalidToken))?;
 
-    Claims::parse_token(token)?;
+    Claims::parse_token(token, TokenType::BASIC)?;
 
     Ok(next.run(request).await)
 }
