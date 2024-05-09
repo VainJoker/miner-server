@@ -12,6 +12,7 @@ use crate::library::{
     error::{AppInnerError, InnerResult},
 };
 
+// TODO: masking the password in the log using macro
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Email<'a> {
     pub to: &'a str,
@@ -40,7 +41,7 @@ impl<'a> Email<'a> {
                 anyhow::anyhow!("Error occurred while sending message: {}", e)
             })?)
             .subject(self.subject)
-            .header(ContentType::TEXT_PLAIN) // 如要发送 HTML 邮件，将这个换成 ContentType::TEXT_HTML
+            .header(ContentType::TEXT_PLAIN) // ContentType::TEXT_HTML
             .body(self.body.to_string())
             .unwrap();
         let creds = Credentials::new(
@@ -66,7 +67,7 @@ impl<'a> Email<'a> {
                 anyhow::anyhow!("Error occurred while sending message: {}", e)
             })?)
             .subject(self.subject)
-            .header(ContentType::TEXT_PLAIN) // 如要发送 HTML 邮件，将这个换成 ContentType::TEXT_HTML
+            .header(ContentType::TEXT_PLAIN) // ContentType::TEXT_HTML
             .body(self.body.to_string())
             .unwrap();
         let creds = Credentials::new(

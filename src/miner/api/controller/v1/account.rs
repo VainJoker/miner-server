@@ -142,7 +142,7 @@ pub async fn send_active_account_email_handler(
         .set_ex(
             &format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY),
             &active_code,
-            60,
+            60 * 5,
         )
         .await?;
 
@@ -173,7 +173,7 @@ pub async fn send_reset_password_email_handler(
         .set_ex(
             &format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY),
             &reset_password_code,
-            60,
+            60 * 5,
         )
         .await?;
 
@@ -212,9 +212,20 @@ pub async fn verify_active_account_code_handler(
         }
     }
 
+    let user = bw_account::BwAccount::fetch_user_by_account_id(
+        state.get_db(),
+        claims.uid,
+    )
+    .await?
+    .ok_or(AuthError(AuthInnerError::WrongCredentials))?;
+
+    let token = token_generator::generate_tokens_for_user(&user).await?;
+
+    state.redis.del(&key).await?;
+
     Ok(SuccessResponse {
         msg: "success",
-        data: None::<()>,
+        data: Some(Json(token)),
     })
 }
 
@@ -247,6 +258,8 @@ pub async fn change_password_handler(
         &reset_password,
     )
     .await?;
+
+    state.redis.del(&key).await?;
 
     Ok(SuccessResponse {
         msg: "success",

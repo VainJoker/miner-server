@@ -161,7 +161,7 @@ impl BwAccount {
         account_id: i64,
     ) -> InnerResult<u64> {
         let map = sqlx::query!(
-            r#"UPDATE bw_account set email_verified_at = now()
+            r#"UPDATE bw_account set email_verified_at = now(), status = 'active'
             WHERE account_id = $1"#,
             account_id
         );

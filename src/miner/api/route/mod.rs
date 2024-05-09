@@ -29,10 +29,11 @@ use crate::miner::{
 pub fn init(inpay_state: Arc<AppState>) -> Router {
     let open = Router::new()
         .route("/auth/login", post(login_user_handler))
-        .route("/auth/register", post(register_user_handler));
+        .route("/auth/register", post(register_user_handler))
+        .route("/users/refresh_token", post(refresh_token_handler))
+        ;
 
     let basic = Router::new()
-        .route("/users/refresh_token", post(refresh_token_handler))
         .route(
             "/users/send_active",
             post(send_active_account_email_handler),
@@ -41,6 +42,10 @@ pub fn init(inpay_state: Arc<AppState>) -> Router {
             "/users/verify_active",
             post(verify_active_account_code_handler),
         )
+        .layer(from_fn(basic_auth::handle));
+
+    let auth = Router::new()
+        .route("/users/get_me", post(get_me_handler))
         .route(
             "/users/send_reset_password",
             post(send_reset_password_email_handler),
@@ -49,10 +54,6 @@ pub fn init(inpay_state: Arc<AppState>) -> Router {
             "/users/verify_reset_password",
             post(change_password_handler),
         )
-        .layer(from_fn(basic_auth::handle));
-
-    let auth = Router::new()
-        .route("/users/get_me", post(get_me_handler))
         .route_layer(from_fn_with_state(inpay_state.clone(), auth::handle))
         .with_state(inpay_state.clone());
 
