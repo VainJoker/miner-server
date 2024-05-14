@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use lettre::{
     message::header::ContentType,
     transport::smtp::{authentication::Credentials, response::Response},

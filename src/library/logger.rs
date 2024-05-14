@@ -71,7 +71,7 @@ pub fn init(
         (error_non_blocking, error_guard),
         stdout,
     ) = {
-        let stdout = cfg.inpay.env == "dev";
+        let stdout = cfg.miner.env == "dev";
 
         let (mine_file, database_file, other_file, error_file) = (
             &cfg.log.mine_file,

@@ -1,14 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use super::claims::TokenSchema;
-use crate::models::{
-    bw_account::BwAccount,
-    types::{Currency, Language},
+use crate::{
+    miner::service::jwt::TokenSchema,
+    models::{
+        bw_account::BwAccount,
+        types::{Currency, Language},
+    },
 };
 
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
-    pub token: TokenSchema,
+    pub tokens: TokenSchema,
     pub name: String,
     pub email: String,
     pub local_currency: Currency,
@@ -16,9 +18,9 @@ pub struct LoginResponse {
 }
 
 impl LoginResponse {
-    pub fn new(token: TokenSchema, user: BwAccount) -> Self {
+    pub fn new(tokens: TokenSchema, user: BwAccount) -> Self {
         Self {
-            token,
+            tokens,
             name: user.name,
             email: user.email,
             local_currency: user.local_currency,

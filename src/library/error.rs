@@ -61,6 +61,9 @@ pub enum AppError {
 
     #[error(transparent)]
     AuthError(#[from] AuthInnerError),
+
+    #[error("Verification Code Interval Not Satisfied")]
+    CodeIntervalRejection,
 }
 
 #[derive(Error, Debug)]
@@ -81,6 +84,8 @@ pub enum AuthInnerError {
     AccountSuspended,
     #[error("InvalidTokenType")]
     InvalidTokenType,
+    #[error("UserAlreadyActivated")]
+    UserAlreadyActivated,
 }
 
 impl AppError {
@@ -105,12 +110,18 @@ impl AppError {
                 }
                 AuthInnerError::WrongCode => (StatusCode::UNAUTHORIZED, 10006),
                 AuthInnerError::AccountSuspended => {
-                    (StatusCode::UNAUTHORIZED, 10006)
+                    (StatusCode::UNAUTHORIZED, 10007)
                 }
                 AuthInnerError::InvalidTokenType => {
-                    (StatusCode::UNAUTHORIZED, 10006)
+                    (StatusCode::UNAUTHORIZED, 10008)
+                }
+                AuthInnerError::UserAlreadyActivated => {
+                    (StatusCode::CONFLICT, 10009)
                 }
             },
+            Self::CodeIntervalRejection => {
+                (StatusCode::TOO_MANY_REQUESTS, 10009)
+            }
             _ => (StatusCode::BAD_REQUEST, 99999),
         }
     }

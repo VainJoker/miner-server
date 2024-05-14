@@ -1,4 +1,4 @@
-use std::{fs, sync::OnceLock};
+use std::{fmt::Debug, fs, sync::OnceLock};
 
 use config::Config;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ static CFG: OnceLock<AppConfig> = OnceLock::new();
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppConfig {
     pub log: LogConfig,
-    pub inpay: InpayConfig,
+    pub miner: MinerConfig,
     pub mail: MailConfig,
 }
 
@@ -31,11 +31,21 @@ pub struct LogConfig {
     pub database_target: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MailConfig {
     pub username: String,
     pub password: String,
     pub host: String,
+}
+
+impl Debug for MailConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Point")
+            .field("username", &self.username)
+            .field("password", &"&self.password")
+            .field("host", &self.host)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -45,7 +55,7 @@ pub struct JWTConfig {
 }
 
 #[derive(Default, Debug, Serialize, Deserialize)]
-pub struct InpayConfig {
+pub struct MinerConfig {
     pub env: String,
     pub host: String,
     pub port: usize,
@@ -53,7 +63,6 @@ pub struct InpayConfig {
     pub redis_url: String,
     pub mq_url: String,
     pub access_token: JWTConfig,
-    pub basic_token: JWTConfig,
     pub refresh_token: JWTConfig,
 }
 

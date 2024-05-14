@@ -29,12 +29,14 @@ impl MqCustomer {
                     tracing::error!("Failed to parse email from message: {}", e)
                 })
                 .and_then(|email| {
-                    email.sync_send_text().map_err(|e| {
+                    let res = email.sync_send_text().map_err(|e| {
                         tracing::error!("Failed to send email: {}", e)
-                    })
+                    });
+                    tracing::debug!("received:{:#?}", email);
+                    res
                 });
-            if result.is_ok() {
-                tracing::debug!("received:{}", message);
+            if result.is_err() {
+                tracing::error!("Failed to send email")
             }
         };
         let delegate = Subscriber::new(func, mqer.clone());

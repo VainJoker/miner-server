@@ -88,7 +88,7 @@ impl ConsumerDelegate for Subscriber {
 impl Mqer {
     pub fn init() -> Self {
         let cfg = cfg::config();
-        let mq_url = cfg.inpay.mq_url.clone();
+        let mq_url = cfg.miner.mq_url.clone();
 
         let deadpool = deadpool_lapin::Config {
             url: Some(mq_url),
@@ -351,14 +351,14 @@ mod tests {
     #[ignore]
     async fn test_basic_send() {
         cfg::init(&"./fixtures/config.toml".to_string());
-        // let mqer = init("inpay.dev.queue", Some("inpay.dev.exchange"),
-        // Some("inpay.dev.routine")).await;
+        // let mqer = init("miner.dev.queue", Some("miner.dev.exchange"),
+        // Some("miner.dev.routine")).await;
         let mqer = Mqer::init();
 
         for i in 0..10 {
             let msg = format!("#{i} Testtest");
             eprintln!("{msg}");
-            let confirm = mqer.basic_send("inpay.dev.queue", &msg).await;
+            let confirm = mqer.basic_send("miner.dev.queue", &msg).await;
             match confirm {
                 Ok(()) => tracing::info!("[x] 消息已发送成功！{}", msg),
                 Err(e) => tracing::error!("{:?}", e),
@@ -378,7 +378,7 @@ mod tests {
         };
         let delegate = Subscriber::new(func, mqer.clone());
         // tokio::spawn(async move {
-        mqer.basic_receive("inpay.dev.queue", "inpay.dev.tag", delegate)
+        mqer.basic_receive("miner.dev.queue", "miner.dev.tag", delegate)
             .await
             .unwrap();
         // });
@@ -394,9 +394,9 @@ mod tests {
     //         let msg = format!("#{i} Testtest");
     //         let confirm = mqer
     //             .topic_send(
-    //                 "inpay.dev.exchange",
-    //                 "inpay.dev.queue",
-    //                 "inpay.dev.routine",
+    //                 "miner.dev.exchange",
+    //                 "miner.dev.queue",
+    //                 "miner.dev.routine",
     //                 &msg,
     //             )
     //             .await;
@@ -415,10 +415,10 @@ mod tests {
     //     cfg::init(&"../fixtures/config.toml".to_string());
     //     let mqer = Mqer::init();
     //     mqer.topic_receive(
-    //         "inpay.dev.queue",
-    //         "inpay.dev.exchange",
-    //         "inpay.dev.routine",
-    //         "inpay.dev.tag",
+    //         "miner.dev.queue",
+    //         "miner.dev.exchange",
+    //         "miner.dev.routine",
+    //         "miner.dev.tag",
     //         move |delivery: DeliveryResult| async move {
     //             tracing::debug!("aaa");
     //             let delivery = match delivery {

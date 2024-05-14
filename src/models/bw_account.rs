@@ -180,4 +180,15 @@ impl BwAccount {
         );
         Ok(map.execute(db).await?.rows_affected())
     }
+
+    pub async fn check_user_active_by_account_id(
+        db: &PgPool,
+        account_id: i64,
+    ) -> InnerResult<Option<bool>> {
+        let map = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM bw_account WHERE account_id = $1 and status = 'active')",
+            account_id
+        );
+        Ok(map.fetch_one(db).await?)
+    }
 }

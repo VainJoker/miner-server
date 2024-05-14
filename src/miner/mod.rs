@@ -18,13 +18,13 @@ use crate::{
 
 pub async fn serve() {
     let cfg = cfg::config();
-    let inpay_state = Arc::new(AppState::init().await);
+    let miner_state = Arc::new(AppState::init().await);
     // Create a regular axum app.
-    let app = route::init(inpay_state.clone());
+    let app = route::init(miner_state.clone());
 
     // Create a `TcpListener` using tokio.
     let listener =
-        TcpListener::bind(format!("{}:{}", &cfg.inpay.host, &cfg.inpay.port))
+        TcpListener::bind(format!("{}:{}", &cfg.miner.host, &cfg.miner.port))
             .await
             .unwrap_or_else(|e| {
                 panic!("💥 Failed to connect bind TcpListener: {e:?}")
@@ -38,11 +38,11 @@ pub async fn serve() {
     );
 
     // Run the MQCustomer
-    tokio::spawn(mq_customer::MqCustomer::serve(inpay_state.clone()));
+    tokio::spawn(mq_customer::MqCustomer::serve(miner_state.clone()));
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(inpay_state))
+        .with_graceful_shutdown(shutdown_signal(miner_state))
         .await
         .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
 }

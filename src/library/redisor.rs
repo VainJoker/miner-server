@@ -14,7 +14,7 @@ pub struct Redisor {
 impl Redisor {
     pub fn init() -> Self {
         let cfg = cfg::config();
-        let redis_url = cfg.inpay.redis_url.clone();
+        let redis_url = cfg.miner.redis_url.clone();
         let deadpool = deadpool_redis::Config::from_url(redis_url);
         match deadpool.create_pool(Some(Runtime::Tokio1)) {
             Ok(pool) => {
@@ -78,7 +78,7 @@ mod tests {
     #[ignore]
     async fn test_redisor_init() {
         cfg::init(&"./fixtures/config.toml".to_string());
-        let redis_url = cfg::config().inpay.redis_url.clone();
+        let redis_url = cfg::config().miner.redis_url.clone();
         let deadpool = deadpool_redis::Config::from_url(redis_url);
         let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
         let redisor = Redisor { pool };

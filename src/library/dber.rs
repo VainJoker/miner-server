@@ -11,7 +11,7 @@ pub struct Dber {
 impl Dber {
     pub async fn init() -> Self {
         let cfg = cfg::config();
-        let database_url = &cfg.inpay.db_url;
+        let database_url = &cfg.miner.db_url;
         match PgPoolOptions::new()
             .max_connections(10)
             .connect(database_url)

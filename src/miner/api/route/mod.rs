@@ -26,12 +26,11 @@ use crate::miner::{
     bootstrap::AppState,
 };
 
-pub fn init(inpay_state: Arc<AppState>) -> Router {
+pub fn init(miner_state: Arc<AppState>) -> Router {
     let open = Router::new()
         .route("/auth/login", post(login_user_handler))
         .route("/auth/register", post(register_user_handler))
-        .route("/users/refresh_token", post(refresh_token_handler))
-        ;
+        .route("/users/refresh_token", post(refresh_token_handler));
 
     let basic = Router::new()
         .route(
@@ -54,13 +53,13 @@ pub fn init(inpay_state: Arc<AppState>) -> Router {
             "/users/verify_reset_password",
             post(change_password_handler),
         )
-        .route_layer(from_fn_with_state(inpay_state.clone(), auth::handle))
-        .with_state(inpay_state.clone());
+        .route_layer(from_fn_with_state(miner_state.clone(), auth::handle))
+        .with_state(miner_state.clone());
 
     Router::new()
         .nest("/api/v1", open.merge(basic).merge(auth))
         .fallback(handler_404)
-        .with_state(inpay_state)
+        .with_state(miner_state)
         .layer(TimeoutLayer::new(Duration::from_secs(30)))
         .layer(from_fn(log::handle))
         .layer(from_fn(cors::handle))

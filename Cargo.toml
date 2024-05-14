@@ -45,6 +45,9 @@ rand = "0.8.5"
 [build-dependencies]
 prost-serde = "0.3"
 
+[dev-dependencies]
+assert-json-diff = "2.0"
+
 [profile.release]
 strip = true
 

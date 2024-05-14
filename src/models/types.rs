@@ -22,7 +22,16 @@ pub enum Language {
     EsEs,
 }
 
-#[derive(sqlx::Type, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(
+    sqlx::Type,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialOrd,
+    PartialEq,
+)]
 #[sqlx(type_name = "account_status")]
 pub enum AccountStatus {
     #[sqlx(rename = "active")]
