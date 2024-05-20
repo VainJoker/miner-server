@@ -6,7 +6,6 @@ use crate::{
     models::types::{AccountStatus, Currency, Language},
 };
 
-#[allow(dead_code)]
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct BwAccount {
@@ -24,17 +23,18 @@ pub struct BwAccount {
 
     pub created_at: NaiveDateTime,
     pub updated_at: Option<NaiveDateTime>,
+    pub deleted_at: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct RegisterUserSchema {
+pub struct RegisterUserRequest {
     pub name: String,
     pub email: String,
     pub password: String,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LoginUserSchema {
+pub struct LoginUserRequest {
     pub email_or_name: String,
     pub password: String,
 }
@@ -64,7 +64,7 @@ impl BwAccount {
             RETURNING account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
             status as "status: _", failed_attempt, last_login,
-            created_at,updated_at
+            created_at,updated_at,deleted_at
             "#,
             new_bw_account.name,
             new_bw_account.email,
@@ -105,7 +105,7 @@ impl BwAccount {
             r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
             status as "status: _", failed_attempt, last_login,
-            created_at,updated_at
+            created_at,updated_at,deleted_at
             FROM bw_account WHERE name = $1 or email = $1"#,
             email_or_name
         );
@@ -121,7 +121,7 @@ impl BwAccount {
             r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
             status as "status: _", failed_attempt, last_login,
-            created_at,updated_at
+            created_at,updated_at,deleted_at
             FROM bw_account WHERE account_id = $1"#,
             account_id
         );
@@ -137,7 +137,7 @@ impl BwAccount {
             r#"SELECT account_id,name,email,email_verified_at,password,
             local_currency as "local_currency: _",system_lang as "system_lang: _",
             status as "status: _", failed_attempt, last_login,
-            created_at,updated_at
+            created_at,updated_at,deleted_at
             FROM bw_account WHERE email = $1"#,
             email
         );

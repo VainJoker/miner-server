@@ -45,7 +45,7 @@ pub struct TokenSchema {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RefreshTokenSchema {
+pub struct RefreshTokenRequest {
     pub refresh_token: String,
 }
 

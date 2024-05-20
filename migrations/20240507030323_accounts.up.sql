@@ -3,7 +3,7 @@ CREATE TABLE bw_account (
     account_id BIGINT PRIMARY KEY DEFAULT next_id(),
     name VARCHAR (255) NOT NULL,
     email VARCHAR (255) UNIQUE NOT NULL,
-    email_verified_at TIMESTAMP DEFAULT NULL,
+    email_verified_at TIMESTAMP,
     password VARCHAR (255) NOT NULL,
     failed_attempt INT NOT NULL DEFAULT 0,
     status account_status NOT NULL DEFAULT 'inactive',
@@ -13,7 +13,8 @@ CREATE TABLE bw_account (
     system_lang language NOT NULL DEFAULT 'en-US',
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT NULL
+    updated_at TIMESTAMP,
+    deleted_at TIMESTAMP
 );
 
 CREATE TRIGGER update_bw_account_updated_at

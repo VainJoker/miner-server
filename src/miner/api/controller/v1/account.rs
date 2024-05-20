@@ -1,12 +1,14 @@
 use std::sync::Arc;
 
 use axum::{extract::State, response::IntoResponse, Json};
-use validator::ValidateRequired;
 
 use crate::{
     library::{
         crypto,
-        error::{AppError::{self, AuthError}, AppResult, AuthInnerError},
+        error::{
+            AppError::{self, AuthError},
+            AppResult, AuthInnerError,
+        },
         mailor::Email,
     },
     miner::{
@@ -20,12 +22,12 @@ use crate::{
             },
             common::SuccessResponse,
         },
-        service::jwt::{Claims, RefreshTokenSchema},
+        service::jwt::{Claims, RefreshTokenRequest},
     },
     models::{
         bw_account::{
-            BwAccount, CreateBwAccountSchema, LoginUserSchema,
-            RegisterUserSchema, ResetPasswordSchema,
+            BwAccount, CreateBwAccountSchema, LoginUserRequest,
+            RegisterUserRequest, ResetPasswordSchema,
         },
         types::AccountStatus,
     },
@@ -33,7 +35,7 @@ use crate::{
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,
-    Json(body): Json<RegisterUserSchema>,
+    Json(body): Json<RegisterUserRequest>,
 ) -> AppResult<impl IntoResponse> {
     if BwAccount::check_user_exists_by_email(state.get_db(), &body.email)
         .await?
@@ -60,7 +62,7 @@ pub async fn register_user_handler(
 
 pub async fn login_user_handler(
     State(state): State<Arc<AppState>>,
-    Json(body): Json<LoginUserSchema>,
+    Json(body): Json<LoginUserRequest>,
 ) -> AppResult<impl IntoResponse> {
     let users = BwAccount::fetch_user_by_email_or_name(
         state.get_db(),
@@ -93,7 +95,7 @@ pub async fn login_user_handler(
 
 pub async fn refresh_token_handler(
     State(state): State<Arc<AppState>>,
-    Json(body): Json<RefreshTokenSchema>,
+    Json(body): Json<RefreshTokenRequest>,
 ) -> AppResult<impl IntoResponse> {
     let token = Claims::refresh_token(&body.refresh_token, state).await?;
     Ok(SuccessResponse {
@@ -119,9 +121,9 @@ pub async fn send_active_account_email_handler(
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
-    if state.redis.get(&key).await?.is_some(){
-        return Err(AppError::CodeIntervalRejection)
-    } 
+    if state.redis.get(&key).await?.is_some() {
+        return Err(AppError::CodeIntervalRejection);
+    }
     if claims.status != AccountStatus::Inactive {
         return Err(AuthError(AuthInnerError::UserAlreadyActivated));
     }
@@ -157,9 +159,9 @@ pub async fn send_reset_password_email_handler(
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
-    if state.redis.get(&key).await?.is_some(){
-        return Err(AppError::CodeIntervalRejection)
-    } 
+    if state.redis.get(&key).await?.is_some() {
+        return Err(AppError::CodeIntervalRejection);
+    }
 
     let reset_password_code = crypto::random_words(6);
     let body = format!("ResetPassword Code: {}", reset_password_code);
