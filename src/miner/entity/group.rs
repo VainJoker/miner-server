@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateGroupRequest{
-
-}
+pub struct CreateGroupRequest {}

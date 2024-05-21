@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-use sqlx::{types::chrono::NaiveDateTime, PgPool};
+use sqlx::types::chrono::NaiveDateTime;
 
 use crate::{
-    library::error::InnerResult,
+    library::{error::InnerResult, DB},
     models::types::{AccountStatus, Currency, Language},
 };
 
@@ -54,8 +54,8 @@ pub struct CreateBwAccountSchema {
 
 impl BwAccount {
     pub async fn register_account(
-        db: &PgPool,
-        new_bw_account: &CreateBwAccountSchema,
+        db: &DB,
+        item: &CreateBwAccountSchema,
     ) -> InnerResult<Self> {
         let map = sqlx::query_as!(
             Self,
@@ -66,16 +66,16 @@ impl BwAccount {
             status as "status: _", failed_attempt, last_login,
             created_at,updated_at,deleted_at
             "#,
-            new_bw_account.name,
-            new_bw_account.email,
-            new_bw_account.password
+            item.name,
+            item.email,
+            item.password
         );
 
         Ok(map.fetch_one(db).await?)
     }
 
     pub async fn check_user_exists_by_email(
-        db: &PgPool,
+        db: &DB,
         email: &str,
     ) -> InnerResult<Option<bool>> {
         let map = sqlx::query_scalar!(
@@ -86,7 +86,7 @@ impl BwAccount {
     }
 
     pub async fn check_user_exists_by_account_id(
-        db: &PgPool,
+        db: &DB,
         account_id: &i64,
     ) -> InnerResult<Option<bool>> {
         let map = sqlx::query_scalar!(
@@ -97,7 +97,7 @@ impl BwAccount {
     }
 
     pub async fn fetch_user_by_email_or_name(
-        db: &PgPool,
+        db: &DB,
         email_or_name: &str,
     ) -> InnerResult<Vec<Self>> {
         let map = sqlx::query_as!(
@@ -113,7 +113,7 @@ impl BwAccount {
     }
 
     pub async fn fetch_user_by_account_id(
-        db: &PgPool,
+        db: &DB,
         account_id: i64,
     ) -> InnerResult<Option<Self>> {
         let map = sqlx::query_as!(
@@ -129,7 +129,7 @@ impl BwAccount {
     }
 
     pub async fn fetch_user_by_email(
-        db: &PgPool,
+        db: &DB,
         email: &str,
     ) -> InnerResult<Option<Self>> {
         let map = sqlx::query_as!(
@@ -145,11 +145,11 @@ impl BwAccount {
     }
 
     pub async fn update_last_login(
-        db: &PgPool,
+        db: &DB,
         account_id: i64,
     ) -> InnerResult<u64> {
         let map = sqlx::query!(
-            r#"UPDATE bw_account set last_login = now()
+            r#"UPDATE bw_account SET last_login = now()
             WHERE account_id = $1"#,
             account_id
         );
@@ -157,7 +157,7 @@ impl BwAccount {
     }
 
     pub async fn update_email_verified_at(
-        db: &PgPool,
+        db: &DB,
         account_id: i64,
     ) -> InnerResult<u64> {
         let map = sqlx::query!(
@@ -169,20 +169,20 @@ impl BwAccount {
     }
 
     pub async fn update_password_by_account_id(
-        db: &PgPool,
-        reset_password: &ResetPasswordSchema,
+        db: &DB,
+        item: &ResetPasswordSchema,
     ) -> InnerResult<u64> {
         let map = sqlx::query!(
             r#"UPDATE bw_account set password = $1
             WHERE account_id = $2"#,
-            reset_password.password,
-            reset_password.account_id
+            item.password,
+            item.account_id
         );
         Ok(map.execute(db).await?.rows_affected())
     }
 
     pub async fn check_user_active_by_account_id(
-        db: &PgPool,
+        db: &DB,
         account_id: i64,
     ) -> InnerResult<Option<bool>> {
         let map = sqlx::query_scalar!(
