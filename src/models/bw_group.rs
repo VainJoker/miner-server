@@ -17,12 +17,11 @@ pub struct BwGroup {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
-// TODO: option remark
 #[derive(Debug, Deserialize)]
 pub struct CreateBwGroupSchema {
     pub account_id: i64,
     pub name: String,
-    pub remark: String,
+    pub remark: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,7 +32,7 @@ pub struct UpdateBwGroupSchema {
     pub remark: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug,Clone, Copy, Deserialize)]
 pub struct DeleteBwGroupSchema {
     pub group_id: i64,
     pub account_id: i64,
@@ -149,24 +148,186 @@ mod tests {
 
     use super::*;
 
-    #[ignore]
+    const ACCOUNT_ID :i64 = 6192889942050345985;
+    const GROUP_ID_1 :i64 = 6193003777960711169;
+    const GROUP_ID_2 :i64 = 6193003777960711170;
+
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn basic_test(pool: PgPool) -> sqlx::Result<()> {
+    async fn test_create_group(pool: PgPool) -> sqlx::Result<()> {
         let new_bw_group = CreateBwGroupSchema {
-            account_id: 6192889942050345985,
+            account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
-            remark: "aaa".to_string(),
+            remark: Some("aaa".to_string()),
         };
         let a = BwGroup::create_bw_group(&pool, &new_bw_group)
             .await
             .unwrap();
         assert_eq!(a.name, "aaa");
-        // let foo = sqlx::query("SELECT * FROM foo")
-        //     .fetch_one(&mut conn)
-        //     .await?;
-
-        // assert_eq!(foo.get::<String, _>("bar"), "foobar!");
 
         Ok(())
     }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_fetch_group_by_account_id(pool: PgPool) -> sqlx::Result<()> {
+        let groups = BwGroup::fetch_group_by_account_id(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert!(groups.len() == 2);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_update_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
+        let update_bw_group = UpdateBwGroupSchema {
+            group_id: GROUP_ID_1,
+            account_id: ACCOUNT_ID,
+            name: Some("bbb".to_string()),
+            remark: Some("bbb".to_string()),
+        };
+        let rows_affected = BwGroup::update_group_by_group_id(&pool, update_bw_group)
+            .await
+            .unwrap();
+        assert_eq!(rows_affected, 1);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_delete_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
+        let delete_bw_group = DeleteBwGroupSchema {
+            group_id: GROUP_ID_1,
+            account_id: ACCOUNT_ID,
+        };
+        let rows_affected = BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+            .await
+            .unwrap();
+        assert_eq!(rows_affected, 1);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_fetch_group_count(pool: PgPool) -> sqlx::Result<()> {
+        let count = BwGroup::fetch_group_count(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert!(count.unwrap() == 2);
+        let new_bw_group = CreateBwGroupSchema {
+            account_id: ACCOUNT_ID,
+            name: "aaa".to_string(),
+            remark: Some("aaa".to_string()),
+        };
+        BwGroup::create_bw_group(&pool, &new_bw_group)
+            .await
+            .unwrap();
+        let count = BwGroup::fetch_group_count(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert!(count.unwrap() == 3);
+        let delete_bw_group = DeleteBwGroupSchema {
+            group_id: GROUP_ID_1,
+            account_id: ACCOUNT_ID,
+        };
+        BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+            .await
+            .unwrap();
+        let count = BwGroup::fetch_group_count(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert!(count.unwrap() == 2);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_fetch_group_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
+        let read_bw_group = ReadBwGroupSchema {
+            group_ids: vec![GROUP_ID_1,GROUP_ID_2],
+            account_id: ACCOUNT_ID,
+        };
+        let groups = BwGroup::fetch_group_info_by_ids(&pool, read_bw_group)
+            .await
+            .unwrap();
+        assert!(groups.len() == 2);
+
+        Ok(())
+    }
+
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_create_group_with_invalid_input(pool: PgPool) -> sqlx::Result<()> {
+        let new_bw_group = CreateBwGroupSchema {
+            account_id: 0,  // Nonexistent account_id
+            name: "".to_string(),  // Empty name
+            remark: Some("aaa".to_string()),
+        };
+        let result = BwGroup::create_bw_group(&pool, &new_bw_group).await;
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_fetch_group_by_nonexistent_account_id(pool: PgPool) -> sqlx::Result<()> {
+        let groups = BwGroup::fetch_group_by_account_id(&pool, 0)  // Nonexistent account_id
+            .await
+            .unwrap();
+        assert!(groups.is_empty());
+
+        Ok(())
+    }
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_update_nonexistent_group(pool: PgPool) -> sqlx::Result<()> {
+        let update_bw_group = UpdateBwGroupSchema {
+            group_id: 0,  // Nonexistent group_id
+            account_id: ACCOUNT_ID,
+            name: Some("bbb".to_string()),
+            remark: Some("bbb".to_string()),
+        };
+        let rows_affected = BwGroup::update_group_by_group_id(&pool, update_bw_group)
+            .await
+            .unwrap();
+        assert_eq!(rows_affected, 0);
+
+        Ok(())
+    }
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_delete_already_deleted_group(pool: PgPool) -> sqlx::Result<()> {
+        let delete_bw_group = DeleteBwGroupSchema {
+            group_id: GROUP_ID_1,
+            account_id: ACCOUNT_ID,
+        };
+        BwGroup::delete_group_by_group_id(&pool, delete_bw_group.clone())
+            .await
+            .unwrap();
+        let rows_affected = BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+            .await
+            .unwrap();
+        assert_eq!(rows_affected, 0);
+
+        Ok(())
+    }
+
+#[sqlx::test(fixtures(path = "../../fixtures", scripts("users","groups")))]
+    async fn test_fetch_group_count_and_info_with_empty_group_list(pool: PgPool) -> sqlx::Result<()> {
+        let new_account_id = 123456789;  // An account_id with no groups
+        let count = BwGroup::fetch_group_count(&pool, new_account_id)
+            .await
+            .unwrap();
+        assert_eq!(count.unwrap(), 0);
+        let read_bw_group = ReadBwGroupSchema {
+            group_ids: vec![],
+            account_id: new_account_id,
+        };
+        let groups = BwGroup::fetch_group_info_by_ids(&pool, read_bw_group)
+            .await
+            .unwrap();
+        assert!(groups.is_empty());
+
+        Ok(())
+    }
+
 }
