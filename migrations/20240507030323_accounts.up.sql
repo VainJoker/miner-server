@@ -1,7 +1,7 @@
 -- Add up migration script here
 CREATE TABLE bw_account (
     account_id BIGINT PRIMARY KEY DEFAULT next_id(),
-    name VARCHAR (255) NOT NULL,
+    name VARCHAR (50) NOT NULL,
     email VARCHAR (255) UNIQUE NOT NULL,
     email_verified_at TIMESTAMP,
     password VARCHAR (255) NOT NULL,

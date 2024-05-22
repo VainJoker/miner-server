@@ -2,7 +2,7 @@
 CREATE TABLE bw_policy (
     policy_id BIGINT PRIMARY KEY DEFAULT next_id(),
     account_id BIGINT NOT NULL,
-    name VARCHAR (255) NOT NULL,
+    name VARCHAR (50) NOT NULL,
 
     settings JSONB NOT NULL,
 

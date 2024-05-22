@@ -1,5 +1,7 @@
-pub mod bw_account;
-pub mod bw_group;
-pub mod bw_policy;
-pub mod bw_template;
+pub mod account;
+pub mod action;
+pub mod group;
+pub mod machine;
+pub mod policy;
+pub mod pool;
 pub mod types;

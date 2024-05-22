@@ -33,6 +33,7 @@ pub enum Language {
     PartialEq,
 )]
 #[sqlx(type_name = "account_status")]
+#[sqlx(rename_all = "lowercase")]
 pub enum AccountStatus {
     #[sqlx(rename = "active")]
     Active,
@@ -40,4 +41,46 @@ pub enum AccountStatus {
     Inactive,
     #[sqlx(rename = "suspended")]
     Suspend,
+}
+
+#[derive(
+    sqlx::Type,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialOrd,
+    PartialEq,
+)]
+#[sqlx(rename_all = "lowercase")]
+pub enum Action {
+    Restart,
+    SendMiner,
+    SetGroup,
+    SetPool,
+    SetPowerMode,
+    SetLED,
+    ResetToFactory,
+    Offline,
+    Upgrade,
+    Delete,
+}
+
+#[derive(
+    sqlx::Type,
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialOrd,
+    PartialEq,
+)]
+#[sqlx(rename_all = "lowercase")]
+pub enum EnergyMode {
+    Power,
+    Idle,
+    Balance,
+    Economize,
 }

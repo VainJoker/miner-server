@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     miner::service::jwt::TokenSchema,
     models::{
-        bw_account::BwAccount,
+        account::BwAccount,
         types::{Currency, Language},
     },
 };
@@ -27,6 +27,19 @@ impl LoginResponse {
             system_lang: user.system_lang,
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RegisterUserRequest {
+    pub name: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoginUserRequest {
+    pub email_or_name: String,
+    pub password: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

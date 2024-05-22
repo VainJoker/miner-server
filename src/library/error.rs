@@ -40,6 +40,22 @@ pub enum MqerError {
 }
 
 #[derive(Error, Debug)]
+pub enum ApiInnerError {
+
+    #[error(transparent)]
+    ValidationError(#[from] validator::ValidationErrors),
+
+    #[error(transparent)]
+    AxumFormRejection(#[from] axum::extract::rejection::FormRejection),
+
+    #[error("Verification Code Interval Not Satisfied")]
+    CodeIntervalRejection,
+
+    #[error("Error occurred when create group")]
+    CreateGroupError
+}
+
+#[derive(Error, Debug)]
 pub enum AppError {
     #[error("Unknown error `{0}`")]
     Unknown(String),
@@ -51,19 +67,13 @@ pub enum AppError {
     ErrSystem(String),
 
     #[error(transparent)]
-    ValidationError(#[from] validator::ValidationErrors),
-
-    #[error(transparent)]
-    AxumFormRejection(#[from] axum::extract::rejection::FormRejection),
-
-    #[error(transparent)]
     InnerError(#[from] AppInnerError),
 
     #[error(transparent)]
     AuthError(#[from] AuthInnerError),
 
-    #[error("Verification Code Interval Not Satisfied")]
-    CodeIntervalRejection,
+    #[error(transparent)]
+    ApiError(#[from] ApiInnerError),
 }
 
 #[derive(Error, Debug)]
@@ -91,9 +101,6 @@ pub enum AuthInnerError {
 impl AppError {
     pub fn select_status_code(app_error: &Self) -> (StatusCode, u32) {
         match app_error {
-            Self::ValidationError(_) => {
-                (StatusCode::UNPROCESSABLE_ENTITY, 20001)
-            }
             Self::AuthError(e) => match e {
                 AuthInnerError::WrongCredentials => {
                     (StatusCode::UNAUTHORIZED, 10001)
@@ -119,8 +126,19 @@ impl AppError {
                     (StatusCode::CONFLICT, 10009)
                 }
             },
-            Self::CodeIntervalRejection => {
-                (StatusCode::TOO_MANY_REQUESTS, 10009)
+            Self::ApiError(e) => match e {
+                ApiInnerError::ValidationError(_) => {
+                    (StatusCode::UNPROCESSABLE_ENTITY, 20001)
+                }
+                ApiInnerError::AxumFormRejection(_) => {
+                    (StatusCode::UNPROCESSABLE_ENTITY, 20001)
+                }
+                ApiInnerError::CodeIntervalRejection => {
+                    (StatusCode::OK, 30002)
+                }
+                ApiInnerError::CreateGroupError => {
+                    (StatusCode::OK, 30002)
+                }
             }
             _ => (StatusCode::BAD_REQUEST, 99999),
         }

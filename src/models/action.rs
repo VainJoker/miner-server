@@ -1,23 +1,19 @@
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use sqlx::types::Json;
+
+use super::types::Action;
 
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
-pub struct BwPolicy {
-    pub policy_id: i64,
+pub struct BwAction {
     pub account_id: i64,
-    pub name: String,
+    pub mac: String,
 
-    pub settings: Json<Vec<Setting>>,
+    pub action: Action,
+
+    pub remark: String,
 
     pub created_at: NaiveDateTime,
     pub updated_at: Option<NaiveDateTime>,
     pub deleted_at: Option<NaiveDateTime>,
-}
-
-#[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
-pub struct Setting{
-    pub time: NaiveDateTime,
-    pub mode: String
 }

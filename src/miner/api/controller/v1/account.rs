@@ -25,13 +25,16 @@ use crate::{
         service::jwt::{Claims, RefreshTokenRequest},
     },
     models::{
-        bw_account::{
-            BwAccount, CreateBwAccountSchema, LoginUserRequest,
-            RegisterUserRequest, ResetPasswordSchema,
+        account::{
+            BwAccount, CreateBwAccountSchema,
+            ResetPasswordSchema,
         },
         types::AccountStatus,
     },
 };
+use crate::library::error::ApiInnerError;
+use crate::library::error::AppError::ApiError;
+use crate::miner::entity::account::{LoginUserRequest, RegisterUserRequest};
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,
@@ -122,7 +125,7 @@ pub async fn send_active_account_email_handler(
 ) -> AppResult<impl IntoResponse> {
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
     if state.redis.get(&key).await?.is_some() {
-        return Err(AppError::CodeIntervalRejection);
+        return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
     if claims.status != AccountStatus::Inactive {
         return Err(AuthError(AuthInnerError::UserAlreadyActivated));
@@ -160,7 +163,7 @@ pub async fn send_reset_password_email_handler(
 ) -> AppResult<impl IntoResponse> {
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
     if state.redis.get(&key).await?.is_some() {
-        return Err(AppError::CodeIntervalRejection);
+        return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
 
     let reset_password_code = crypto::random_words(6);

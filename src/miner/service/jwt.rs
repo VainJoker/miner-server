@@ -19,7 +19,7 @@ use crate::{
         error::{AppError, AppError::AuthError, AppResult, AuthInnerError},
     },
     miner::bootstrap::AppState,
-    models::{bw_account::BwAccount, types::AccountStatus},
+    models::{account::BwAccount, types::AccountStatus},
 };
 
 #[derive(Debug, Serialize, Deserialize)]

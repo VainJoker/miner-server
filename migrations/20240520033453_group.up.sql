@@ -2,7 +2,7 @@
 CREATE TABLE bw_group (
     group_id BIGINT PRIMARY KEY DEFAULT next_id(),
     account_id BIGINT NOT NULL,
-    name VARCHAR (255) NOT NULL,
+    name VARCHAR (50) NOT NULL,
 
     remark TEXT,
 
