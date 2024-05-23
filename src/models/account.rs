@@ -26,7 +26,6 @@ pub struct BwAccount {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
-
 #[derive(Debug, Deserialize)]
 pub struct ResetPasswordSchema {
     pub account_id: i64,

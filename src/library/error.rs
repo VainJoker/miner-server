@@ -41,7 +41,6 @@ pub enum MqerError {
 
 #[derive(Error, Debug)]
 pub enum ApiInnerError {
-
     #[error(transparent)]
     ValidationError(#[from] validator::ValidationErrors),
 
@@ -52,7 +51,7 @@ pub enum ApiInnerError {
     CodeIntervalRejection,
 
     #[error("Error occurred when create group")]
-    CreateGroupError
+    CreateGroupError,
 }
 
 #[derive(Error, Debug)]
@@ -133,13 +132,9 @@ impl AppError {
                 ApiInnerError::AxumFormRejection(_) => {
                     (StatusCode::UNPROCESSABLE_ENTITY, 20001)
                 }
-                ApiInnerError::CodeIntervalRejection => {
-                    (StatusCode::OK, 30002)
-                }
-                ApiInnerError::CreateGroupError => {
-                    (StatusCode::OK, 30002)
-                }
-            }
+                ApiInnerError::CodeIntervalRejection => (StatusCode::OK, 30002),
+                ApiInnerError::CreateGroupError => (StatusCode::OK, 30002),
+            },
             _ => (StatusCode::BAD_REQUEST, 99999),
         }
     }

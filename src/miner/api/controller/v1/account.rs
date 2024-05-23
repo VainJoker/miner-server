@@ -6,7 +6,8 @@ use crate::{
     library::{
         crypto,
         error::{
-            AppError::{self, AuthError},
+            ApiInnerError,
+            AppError::{ApiError, AuthError},
             AppResult, AuthInnerError,
         },
         mailor::Email,
@@ -18,23 +19,18 @@ use crate::{
         },
         entity::{
             account::{
-                ActiveAccountRequest, LoginResponse, ResetPasswordRequest,
+                ActiveAccountRequest, LoginResponse, LoginUserRequest,
+                RegisterUserRequest, ResetPasswordRequest,
             },
             common::SuccessResponse,
         },
         service::jwt::{Claims, RefreshTokenRequest},
     },
     models::{
-        account::{
-            BwAccount, CreateBwAccountSchema,
-            ResetPasswordSchema,
-        },
+        account::{BwAccount, CreateBwAccountSchema, ResetPasswordSchema},
         types::AccountStatus,
     },
 };
-use crate::library::error::ApiInnerError;
-use crate::library::error::AppError::ApiError;
-use crate::miner::entity::account::{LoginUserRequest, RegisterUserRequest};
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,
