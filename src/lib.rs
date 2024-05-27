@@ -1,3 +1,5 @@
+extern crate core;
+
 pub mod cmd;
 pub mod cron;
 pub mod library;

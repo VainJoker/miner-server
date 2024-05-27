@@ -19,9 +19,16 @@ use super::{
     middleware::{auth, basic_auth, cors, log, req_id},
 };
 use crate::miner::{
-    api::controller::v1::account::{
-        get_me_handler, login_user_handler, register_user_handler,
-        send_active_account_email_handler,
+    api::controller::v1::{
+        account::{
+            get_me_handler, login_user_handler, register_user_handler,
+            send_active_account_email_handler,
+        },
+        group::{
+            create_group_handler, delete_group_handler,
+            get_groups_by_ids_handler, get_groups_handler,
+            update_group_handler,
+        },
     },
     bootstrap::AppState,
 };
@@ -53,6 +60,11 @@ pub fn init(miner_state: Arc<AppState>) -> Router {
             "/users/verify_reset_password",
             post(change_password_handler),
         )
+        .route("/groups/list", post(get_groups_handler))
+        .route("/groups/create", post(create_group_handler))
+        .route("/groups/update", post(update_group_handler))
+        .route("/groups/delete", post(delete_group_handler))
+        .route("/groups/ids", post(get_groups_by_ids_handler))
         .route_layer(from_fn_with_state(miner_state.clone(), auth::handle))
         .with_state(miner_state.clone());
 

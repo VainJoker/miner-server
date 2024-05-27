@@ -134,3 +134,118 @@ impl BwPolicy {
         Ok(map.fetch_all(db).await?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+    use sqlx::PgPool;
+
+    use super::*;
+
+    const ACCOUNT_ID: i64 = 6192889942050345985;
+    const POLICY_ID_1: i64 = 6194821006046008321;
+    const POLICY_ID_2: i64 = 6194821006046008322;
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
+    async fn test_create_bw_policy(pool: PgPool) -> sqlx::Result<()> {
+        let new_bw_policy = CreateBwPolicySchema {
+            account_id: ACCOUNT_ID,
+            name: "aaa".to_string(),
+            settings: Some(vec![Setting {
+                time: Utc::now().naive_utc(),
+                mode: "test".to_string(),
+            }]),
+        };
+        let a = BwPolicy::create_bw_policy(&pool, &new_bw_policy)
+            .await
+            .unwrap();
+        assert_eq!(a.name, "aaa");
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../fixtures",
+        scripts("users", "policy")
+    ))]
+    async fn test_fetch_policy_by_account_id(pool: PgPool) -> sqlx::Result<()> {
+        let policies = BwPolicy::fetch_policy_by_account_id(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert_eq!(policies.len(), 2);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../fixtures",
+        scripts("users", "policy")
+    ))]
+    async fn test_update_policy_by_policy_id(pool: PgPool) -> sqlx::Result<()> {
+        let update_bw_policy = UpdateBwPolicySchema {
+            policy_id: POLICY_ID_1,
+            account_id: ACCOUNT_ID,
+            name: Some("bbb".to_string()),
+            settings: Some(vec![Setting {
+                time: Utc::now().naive_utc(),
+                mode: "test".to_string(),
+            }]),
+        };
+        let rows_affected =
+            BwPolicy::update_policy_by_policy_id(&pool, update_bw_policy)
+                .await
+                .unwrap();
+        assert_eq!(rows_affected, 1);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../fixtures",
+        scripts("users", "policy")
+    ))]
+    async fn test_delete_policy_by_policy_id(pool: PgPool) -> sqlx::Result<()> {
+        let delete_bw_policy = DeleteBwPolicySchema {
+            policy_id: POLICY_ID_1,
+            account_id: ACCOUNT_ID,
+        };
+        let rows_affected =
+            BwPolicy::delete_policy_by_policy_id(&pool, delete_bw_policy)
+                .await
+                .unwrap();
+        assert_eq!(rows_affected, 1);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../fixtures",
+        scripts("users", "policy")
+    ))]
+    async fn test_fetch_policy_count(pool: PgPool) -> sqlx::Result<()> {
+        let count = BwPolicy::fetch_policy_count(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert_eq!(count.unwrap(), 2);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../fixtures",
+        scripts("users", "policy")
+    ))]
+    async fn test_fetch_policy_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
+        let read_bw_policy = ReadBwPolicySchema {
+            policy_ids: vec![POLICY_ID_1, POLICY_ID_2],
+            account_id: ACCOUNT_ID,
+        };
+        let policies =
+            BwPolicy::fetch_policy_info_by_ids(&pool, read_bw_policy)
+                .await
+                .unwrap();
+        assert_eq!(policies.len(), 2);
+
+        Ok(())
+    }
+}

@@ -16,5 +16,9 @@ pub struct UpdateBwGroupRequest {
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct DeleteBwGroupRequest {
     pub group_id: i64,
-    pub account_id: i64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ReadBwGroupRequest {
+    pub group_ids: Vec<i64>,
 }

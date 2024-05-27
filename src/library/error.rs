@@ -52,6 +52,12 @@ pub enum ApiInnerError {
 
     #[error("Error occurred when create group")]
     CreateGroupError,
+    #[error("Error occurred when Get group")]
+    GetGroupError,
+    #[error("Error occurred when Delete group")]
+    DeleteGroupError,
+    #[error("Error occurred when Update group")]
+    UpdateGroupError,
 }
 
 #[derive(Error, Debug)]
@@ -132,8 +138,11 @@ impl AppError {
                 ApiInnerError::AxumFormRejection(_) => {
                     (StatusCode::UNPROCESSABLE_ENTITY, 20001)
                 }
-                ApiInnerError::CodeIntervalRejection => (StatusCode::OK, 30002),
+                ApiInnerError::CodeIntervalRejection => (StatusCode::OK, 30001),
                 ApiInnerError::CreateGroupError => (StatusCode::OK, 30002),
+                ApiInnerError::GetGroupError => (StatusCode::OK, 30003),
+                ApiInnerError::DeleteGroupError => (StatusCode::OK, 30004),
+                ApiInnerError::UpdateGroupError => (StatusCode::OK, 30004),
             },
             _ => (StatusCode::BAD_REQUEST, 99999),
         }

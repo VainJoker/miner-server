@@ -76,7 +76,7 @@ impl BwGroup {
 
     pub async fn update_group_by_group_id(
         db: &DB,
-        item: UpdateBwGroupSchema,
+        item: &UpdateBwGroupSchema,
     ) -> InnerResult<u64> {
         let sql = r#"
         UPDATE bw_group SET name = COALESCE($1, name), remark = COALESCE($2, remark)
@@ -92,7 +92,7 @@ impl BwGroup {
 
     pub async fn delete_group_by_group_id(
         db: &DB,
-        item: DeleteBwGroupSchema,
+        item: &DeleteBwGroupSchema,
     ) -> InnerResult<u64> {
         let sql = r#"
         UPDATE bw_group SET deleted_at = now()
@@ -113,7 +113,7 @@ impl BwGroup {
 
     pub async fn fetch_group_info_by_ids(
         db: &DB,
-        item: ReadBwGroupSchema,
+        item: &ReadBwGroupSchema,
     ) -> InnerResult<Vec<Self>> {
         let sql = r#"
         SELECT group_id,account_id,name,remark,
@@ -125,84 +125,6 @@ impl BwGroup {
             .bind(&item.group_ids);
         Ok(map.fetch_all(db).await?)
     }
-
-    // pub async fn fetch_group_by_account_id(
-    //     db: &DB,
-    //     account_id: i64,
-    // ) -> InnerResult<Vec<Self>> {
-    //     let map = sqlx::query_as!(
-    //         Self,
-    //         r#"
-    //         SELECT group_id,account_id,name,remark,
-    //         created_at,updated_at,deleted_at
-    //         FROM bw_group WHERE account_id = $1 AND deleted_at IS NULL
-    //         "#,
-    //         account_id
-    //     );
-    //     Ok(map.fetch_all(db).await?)
-    // }
-    //
-    // pub async fn update_group_by_group_id(
-    //     db: &DB,
-    //     item: UpdateBwGroupSchema,
-    // ) -> InnerResult<u64> {
-    //     let map = sqlx::query_as!(
-    //         Self,
-    //         r#"
-    //         UPDATE bw_group SET name = COALESCE($1, name), remark =
-    // COALESCE($2, remark)         WHERE group_id = $3 AND account_id = $4
-    // AND deleted_at IS NULL         "#,
-    //         item.name,
-    //         item.remark,
-    //         item.group_id,
-    //         item.account_id
-    //     );
-    //     Ok(map.execute(db).await?.rows_affected())
-    // }
-    //
-    // pub async fn delete_group_by_group_id(
-    //     db: &DB,
-    //     item: DeleteBwGroupSchema,
-    // ) -> InnerResult<u64> {
-    //     let map = sqlx::query_as!(
-    //         Self,
-    //         r#"
-    //         UPDATE bw_group SET deleted_at = now()
-    //         WHERE group_id = $1 AND account_id = $2 AND deleted_at IS NULL
-    //         "#,
-    //         item.group_id,
-    //         item.account_id
-    //     );
-    //     Ok(map.execute(db).await?.rows_affected())
-    // }
-    //
-    // pub async fn fetch_group_count(
-    //     db: &DB,
-    //     account_id: i64,
-    // ) -> InnerResult<Option<i64>> {
-    //     let map = sqlx::query_scalar!(
-    //         r#"SELECT COUNT(*) FROM bw_group WHERE deleted_at IS NULL and
-    // account_id = $1"#,         account_id
-    //     );
-    //     Ok(map.fetch_one(db).await?)
-    // }
-    //
-    // pub async fn fetch_group_info_by_ids(
-    //     db: &DB,
-    //     item: ReadBwGroupSchema,
-    // ) -> InnerResult<Vec<Self>> {
-    //     let map = sqlx::query_as!(
-    //         Self,
-    //         r#"
-    //         SELECT group_id,account_id,name,remark,
-    //         created_at,updated_at,deleted_at
-    //         FROM bw_group WHERE account_id = $1 AND group_id = ANY($2)
-    //         "#,
-    //         item.account_id,
-    //         &item.group_ids
-    //     );
-    //     Ok(map.fetch_all(db).await?)
-    // }
 }
 
 #[cfg(test)]
@@ -238,7 +160,7 @@ mod tests {
         let groups = BwGroup::fetch_group_by_account_id(&pool, ACCOUNT_ID)
             .await
             .unwrap();
-        assert!(groups.len() == 2);
+        assert_eq!(groups.len(), 2);
 
         Ok(())
     }
@@ -255,7 +177,7 @@ mod tests {
             remark: Some("bbb".to_string()),
         };
         let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, update_bw_group)
+            BwGroup::update_group_by_group_id(&pool, &update_bw_group)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -273,7 +195,7 @@ mod tests {
             account_id: ACCOUNT_ID,
         };
         let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+            BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -288,7 +210,7 @@ mod tests {
     async fn test_fetch_group_count(pool: PgPool) -> sqlx::Result<()> {
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
-        assert!(count.unwrap() == 2);
+        assert_eq!(count.unwrap(), 2);
         let new_bw_group = CreateBwGroupSchema {
             account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
@@ -299,17 +221,17 @@ mod tests {
             .unwrap();
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
-        assert!(count.unwrap() == 3);
+        assert_eq!(count.unwrap(), 3);
         let delete_bw_group = DeleteBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
-        BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+        BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
             .await
             .unwrap();
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
-        assert!(count.unwrap() == 2);
+        assert_eq!(count.unwrap(), 2);
 
         Ok(())
     }
@@ -323,10 +245,10 @@ mod tests {
             group_ids: vec![GROUP_ID_1, GROUP_ID_2],
             account_id: ACCOUNT_ID,
         };
-        let groups = BwGroup::fetch_group_info_by_ids(&pool, read_bw_group)
+        let groups = BwGroup::fetch_group_info_by_ids(&pool, &read_bw_group)
             .await
             .unwrap();
-        assert!(groups.len() == 2);
+        assert_eq!(groups.len(), 2);
 
         Ok(())
     }
@@ -376,7 +298,7 @@ mod tests {
             remark: Some("bbb".to_string()),
         };
         let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, update_bw_group)
+            BwGroup::update_group_by_group_id(&pool, &update_bw_group)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);
