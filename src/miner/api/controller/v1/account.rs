@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{extract::State, Json, response::IntoResponse};
 
 use crate::{
     library::{
@@ -14,8 +14,8 @@ use crate::{
     },
     miner::{
         bootstrap::{
-            constants::{self, MQ_SEND_EMAIL_QUEUE},
             AppState,
+            constants::{self, MQ_SEND_EMAIL_QUEUE},
         },
         entity::{
             account::{
@@ -24,13 +24,13 @@ use crate::{
             },
             common::SuccessResponse,
         },
-        service::jwt::{Claims, RefreshTokenRequest},
     },
     models::{
         account::{BwAccount, CreateBwAccountSchema, ResetPasswordSchema},
         types::AccountStatus,
     },
 };
+use crate::miner::entity::jwt::{Claims, RefreshTokenRequest};
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,
@@ -142,10 +142,10 @@ pub async fn send_active_account_email_handler(
     let email_json = serde_json::to_string(&email).map_err(|e| {
         anyhow::anyhow!("Error occurred while sending email: {}", e)
     })?;
-    state
-        .get_mq()?
-        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
-        .await?;
+    // state
+    //     .get_mq()?
+    //     .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
+    //     .await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -178,10 +178,10 @@ pub async fn send_reset_password_email_handler(
     let email_json = serde_json::to_string(&email).map_err(|e| {
         anyhow::anyhow!("Error occurred while sending email: {}", e)
     })?;
-    state
-        .get_mq()?
-        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
-        .await?;
+    // state
+    //     .get_mq()?
+    //     .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
+    //     .await?;
 
     Ok(SuccessResponse {
         msg: "success",

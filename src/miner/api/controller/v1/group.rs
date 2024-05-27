@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, response::IntoResponse, Json};
+use axum::{extract::State, Json, response::IntoResponse};
 
 use crate::{
     library::error::{ApiInnerError, AppError::ApiError, AppResult},
@@ -13,13 +13,13 @@ use crate::{
                 UpdateBwGroupRequest,
             },
         },
-        service::jwt::Claims,
     },
     models::group::{
         BwGroup, CreateBwGroupSchema, DeleteBwGroupSchema, ReadBwGroupSchema,
         UpdateBwGroupSchema,
     },
 };
+use crate::miner::entity::jwt::Claims;
 
 pub async fn create_group_handler(
     State(state): State<Arc<AppState>>,

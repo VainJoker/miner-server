@@ -17,6 +17,7 @@ impl Dber {
             .connect(database_url)
             .await
         {
+            // TODO: Timeout
             Ok(pool) => {
                 tracing::info!("🚀 Connection to the database is successful!");
                 Self { pool }

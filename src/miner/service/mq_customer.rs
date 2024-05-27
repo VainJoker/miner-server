@@ -7,22 +7,36 @@ use crate::{
         AppState,
     },
 };
+use crate::library::{MQ, Mqer};
 
-pub struct MqCustomer {}
+#[derive(Clone)]
+pub struct Server{
+    mqer: Mqer
+}
 
-impl MqCustomer {
-    pub async fn serve(state: Arc<AppState>) {
-        let customer = MqCustomer {};
-        match customer.email_sender(state.clone()).await {
+impl Server {
+    pub fn init() -> Server {
+        Server{
+            mqer: Mqer::init()
+        }
+    }
+
+    pub async fn serve(&self) -> AppResult<()> {
+        match self.email_sender().await {
             Ok(()) => {}
             Err(e) => {
-                tracing::error!("Email Sender Broken: {}", e)
+                tracing::error!("Error occurred while sending email: {}", e)
             }
         };
+        Ok(())
     }
-    pub async fn email_sender(&self, state: Arc<AppState>) -> AppResult<()> {
+
+    pub fn shutdown(&self) -> AppResult<()> {
+        self.mqer.graceful_shutdown()
+    }
+
+    pub async fn email_sender(&self) -> AppResult<()> {
         tracing::debug!("customer started");
-        let mqer = state.get_mq()?;
         let func = |message: String| {
             let result = serde_json::from_str::<Email>(&message)
                 .map_err(|e| {
@@ -39,8 +53,8 @@ impl MqCustomer {
                 tracing::error!("Failed to send email")
             }
         };
-        let delegate = Subscriber::new(func, mqer.clone());
-        Ok(mqer
+        let delegate = Subscriber::new(func, self.mqer.clone());
+        Ok(self.mqer
             .basic_receive(MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG, delegate)
             .await?)
     }

@@ -1,7 +1,46 @@
+use std::time::Duration;
 use serde_derive::{Deserialize, Serialize};
+use tokio::sync::oneshot;
+use tokio::time::interval;
+use crate::library::cfg;
 
 use crate::library::error::{AppError, AppResult};
 
+pub struct Server<'a>{
+    exchange_rate: ExchangeRate<'a>,
+}
+
+impl Server<'_> {
+    pub fn init() -> Server<'static> {
+        let cfg = cfg::config();
+        let exchange_rate_host = &cfg.miner.exchange_rate.host;
+        let exchange_rate_key = &cfg.miner.exchange_rate.key;
+        let exchange_rate = ExchangeRate::new(exchange_rate_host, exchange_rate_key);
+        Server{
+            exchange_rate
+        }
+    }
+
+    pub async fn serve(&self) -> AppResult<()> {
+        let mut interval = interval(Duration::from_secs(60 * 60));
+
+        loop {
+            interval.tick().await;
+
+            match self.exchange_rate.get_rate() {
+                Ok(_) => tracing::trace!("Successfully fetched exchange rate"),
+                Err(e) => tracing::error!("Error fetching exchange rate: {:?}", e),
+            }
+        }
+    }
+
+    pub fn shutdown(&self) -> AppResult<()> {
+        Ok(())
+    }
+
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExchangeRate<'a> {
     pub host: &'a str,
     pub key: &'a str,

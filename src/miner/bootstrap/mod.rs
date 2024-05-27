@@ -9,7 +9,6 @@ use crate::library::{dber::DB, error::AppResult, Dber, Mqer, Redis, Redisor};
 pub struct AppState {
     pub db: Dber,
     pub redis: Redisor,
-    pub mq: Mqer,
 }
 
 impl AppState {
@@ -17,7 +16,6 @@ impl AppState {
         Self {
             db: Dber::init().await,
             redis: Redisor::init(),
-            mq: Mqer::init(),
         }
     }
 
@@ -29,12 +27,9 @@ impl AppState {
         Ok(self.redis.get_conn().await?)
     }
 
-    pub const fn get_mq(&self) -> AppResult<&Mqer> {
-        Ok(&self.mq)
-    }
 }
 
-pub async fn shutdown_signal(state: Arc<AppState>) {
+pub async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -55,17 +50,9 @@ pub async fn shutdown_signal(state: Arc<AppState>) {
     tokio::select! {
         () = ctrl_c => {
             tracing::info!("Ctrl+C signal received.");
-            match state.mq.graceful_shutdown(){
-                Ok(_) => (),
-                Err(e) => tracing::error!("Error shutting down RabbitMQ: {:?}", e),
-            }
         },
         () = terminate => {
             tracing::info!("Terminate signal received.");
-            match state.mq.graceful_shutdown(){
-                Ok(_) => (),
-                Err(e) => tracing::error!("Error shutting down RabbitMQ: {:?}", e),
-            }
         },
     }
 }

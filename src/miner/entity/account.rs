@@ -1,12 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    miner::service::jwt::TokenSchema,
-    models::{
-        account::BwAccount,
-        types::{Currency, Language},
-    },
+use crate::models::{
+    account::BwAccount,
+    types::{Currency, Language},
 };
+use crate::miner::entity::jwt::TokenSchema;
 
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {

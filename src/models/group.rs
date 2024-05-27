@@ -317,11 +317,11 @@ mod tests {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
-        BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+        BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
             .await
             .unwrap();
         let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, delete_bw_group)
+            BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);
@@ -345,7 +345,7 @@ mod tests {
             group_ids: vec![],
             account_id: new_account_id,
         };
-        let groups = BwGroup::fetch_group_info_by_ids(&pool, read_bw_group)
+        let groups = BwGroup::fetch_group_info_by_ids(&pool, &read_bw_group)
             .await
             .unwrap();
         assert!(groups.is_empty());

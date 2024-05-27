@@ -3,9 +3,10 @@ pub mod bootstrap;
 pub mod entity;
 pub mod service;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use tokio::net::TcpListener;
+use tokio::sync::oneshot;
 
 use crate::{
     library::cfg,
@@ -15,82 +16,8 @@ use crate::{
         service::mq_customer,
     },
 };
+use crate::miner::service::Server;
 
-// TODO:
-// 我需要使用一个Server 决定所有 serevice 是否应该停止
-// 这是一个示例
-// use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
-// use std::thread;
-//
-// struct Server {
-//     api: ApiServer,
-//     mqtt: MqttServer,
-//     should_stop: Arc<AtomicBool>,
-// }
-//
-// impl Server {
-//     fn new() -> Self {
-//         Server {
-//             api: ApiServer::new(),
-//             mqtt: MqttServer::new(),
-//             should_stop: Arc::new(AtomicBool::new(false)),
-//         }
-//     }
-//
-//     fn run(&self) {
-//         let api_should_stop = Arc::clone(&self.should_stop);
-//         let mqtt_should_stop = Arc::clone(&self.should_stop);
-//
-//         let api_thread = thread::spawn(move || {
-//             self.api.run(api_should_stop);
-//         });
-//
-//         let mqtt_thread = thread::spawn(move || {
-//             self.mqtt.run(mqtt_should_stop);
-//         });
-//
-//         api_thread.join().unwrap();
-//         mqtt_thread.join().unwrap();
-//     }
-//
-//     fn shutdown(&self) {
-//         self.should_stop.store(true, Ordering::SeqCst);
-//     }
-// }
-//
-// struct ApiServer;
-//
-// impl ApiServer {
-//     fn new() -> Self {
-//         ApiServer
-//     }
-//
-//     fn run(&self, should_stop: Arc<AtomicBool>) {
-//         while !should_stop.load(Ordering::SeqCst) {
-//             // Run the API server here
-//         }
-//     }
-// }
-//
-// struct MqttServer;
-//
-// impl MqttServer {
-//     fn new() -> Self {
-//         MqttServer
-//     }
-//
-//     fn run(&self, should_stop: Arc<AtomicBool>) {
-//         while !should_stop.load(Ordering::SeqCst) {
-//             // Run the MQTT server here
-//         }
-//     }
-// }
-//
-// fn main() {
-//     let server = Server::new();
-//     server.run();
-//     server.shutdown();
-// }
 
 pub async fn serve() {
     let cfg = cfg::config();
@@ -114,11 +41,69 @@ pub async fn serve() {
     );
 
     // Run the MQCustomer
-    tokio::spawn(mq_customer::MqCustomer::serve(miner_state.clone()));
+    // tokio::spawn(mq_customer::MqCustomer::serve(miner_state.clone()));
+
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(miner_state))
+        .with_graceful_shutdown(shutdown_signal)
         .await
         .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
 }
+
+
+// pub struct Server {
+//     api: Arc<Mutex<api::Server>>,
+//     mqtt: Arc<Mutex<mqtt::Server>>,
+//     cancel: Option<oneshot::Sender<()>>,
+// }
+//
+// impl Server {
+//     pub fn new() -> Result<Server, Box<dyn std::error::Error>> {
+//         // Initialize MySQL and Redis clients here
+//         let db = Arc::new(Mutex::new(mysqlx::default_client()?));
+//         let redis = Arc::new(Mutex::new(redisx::default_client()?));
+//
+//         instance::set_db(db.clone());
+//         instance::set_redis(redis.clone());
+//
+//         let api = Arc::new(Mutex::new(api::new()));
+//         let mqtt = Arc::new(Mutex::new(mqtt::new(/* mqtt options here */)));
+//
+//         Ok(Server {
+//             api,
+//             mqtt,
+//             cancel: None,
+//         })
+//     }
+//
+//     pub async fn run(&mut self) {
+//         let (cancel_tx, cancel_rx) = oneshot::channel();
+//         self.cancel = Some(cancel_tx);
+//
+//         let api_future = {
+//             let api = self.api.clone();
+//             tokio::spawn(async move {
+//                 api.lock().unwrap().run(cancel_rx).await;
+//             })
+//         };
+//
+//         let mqtt_future = {
+//             let mqtt = self.mqtt.clone();
+//             tokio::spawn(async move {
+//                 mqtt.lock().unwrap().run(cancel_rx).await;
+//             })
+//         };
+//
+//         let _ = tokio::try_join!(api_future, mqtt_future);
+//     }
+//
+//     pub fn shutdown(&mut self) {
+//         if let Some(cancel) = self.cancel.take() {
+//             let _ = cancel.send(());
+//         }
+//
+//         self.api.lock().unwrap().shutdown();
+//         self.mqtt.lock().unwrap().shutdown();
+//     }
+// }

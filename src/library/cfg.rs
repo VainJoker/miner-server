@@ -54,6 +54,19 @@ pub struct JWTConfig {
     pub secret_expiration: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExchangeRateConfig {
+    pub host: String,
+    pub key: String,
+    pub frequency: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CoinStatConfig {
+    pub host: String,
+    pub frequency: u64,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct MinerConfig {
     pub env: String,
@@ -64,6 +77,9 @@ pub struct MinerConfig {
     pub mq_url: String,
     pub access_token: JWTConfig,
     pub refresh_token: JWTConfig,
+    pub exchange_rate: ExchangeRateConfig,
+    pub coin_stat: CoinStatConfig,
+    pub coins: Vec<String>,
 }
 
 /// Initializes the application's configuration from the provided file.

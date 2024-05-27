@@ -5,6 +5,7 @@ port = 8080
 db_url = "postgres://VJ:123qwe@localhost/miner"
 redis_url = "redis://localhost"
 mq_url = "amqp://VJ:123qwe@localhost:5672"
+coins = ["BTC", "ETH", "XRP", "LTC", "DASH", "USDT", "USDC", "XMR", "DOGE"]
 
 [miner.access_token]
 secret = "your_access_token_secret"
@@ -13,6 +14,15 @@ secret_expiration = 3600
 [miner.refresh_token]
 secret = "your_refresh_token_secret"
 secret_expiration = 72000
+
+[miner.exchange_rate]
+host = "https://v6.exchangerate-api.com/v6"
+key = "83b2f3250fcbb02d93d4e3bf"
+frequency = 3600
+
+[miner.coin_stat]
+host = "https://api.coingecko.com/api/v3"
+frequency = 60
 
 [log]
 mine_target = "miner_server"

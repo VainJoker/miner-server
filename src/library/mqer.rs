@@ -138,7 +138,7 @@ impl Mqer {
                 tracing::warn!("Graceful shutdown timed out, exiting.");
                 break;
             }
-            std::thread::sleep(tokio::time::Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs(1));
         }
 
         tracing::info!("MQ Stopped");
