@@ -183,12 +183,12 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
     async fn test_register_account(pool: PgPool) -> sqlx::Result<()> {
-        let new_account = CreateBwAccountSchema {
+        let item = CreateBwAccountSchema {
             name: NAME.to_string(),
             email: EMAIL.to_string(),
             password: PASSWORD.to_string(),
         };
-        let account = BwAccount::register_account(&pool, &new_account)
+        let account = BwAccount::register_account(&pool, &item)
             .await
             .unwrap();
         assert_eq!(account.email, EMAIL);
@@ -283,12 +283,12 @@ mod tests {
     async fn test_update_password_by_account_id(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let new_password = ResetPasswordSchema {
+        let item = ResetPasswordSchema {
             account_id: ACCOUNT_ID,
             password: "new_password".to_string(),
         };
         let rows_affected =
-            BwAccount::update_password_by_account_id(&pool, &new_password)
+            BwAccount::update_password_by_account_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -300,12 +300,12 @@ mod tests {
     async fn test_register_account_with_existing_email(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let new_account = CreateBwAccountSchema {
+        let item = CreateBwAccountSchema {
             name: "New User".to_string(),
             email: MY_EMAIL.to_string(),
             password: "password".to_string(),
         };
-        let result = BwAccount::register_account(&pool, &new_account).await;
+        let result = BwAccount::register_account(&pool, &item).await;
         assert!(result.is_err());
 
         Ok(())
@@ -409,12 +409,12 @@ mod tests {
     async fn test_update_password_for_nonexistent_account(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let new_password = ResetPasswordSchema {
+        let item = ResetPasswordSchema {
             account_id: NONEXISTENT_ACCOUNT_ID,
             password: "new_password".to_string(),
         };
         let rows_affected =
-            BwAccount::update_password_by_account_id(&pool, &new_password)
+            BwAccount::update_password_by_account_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);

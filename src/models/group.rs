@@ -139,12 +139,12 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
     async fn test_create_group(pool: PgPool) -> sqlx::Result<()> {
-        let new_bw_group = CreateBwGroupSchema {
+        let item = CreateBwGroupSchema {
             account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
             remark: Some("aaa".to_string()),
         };
-        let a = BwGroup::create_bw_group(&pool, &new_bw_group)
+        let a = BwGroup::create_bw_group(&pool, &item)
             .await
             .unwrap();
         assert_eq!(a.name, "aaa");
@@ -170,14 +170,14 @@ mod tests {
         scripts("users", "groups")
     ))]
     async fn test_update_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
-        let update_bw_group = UpdateBwGroupSchema {
+        let item = UpdateBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
             name: Some("bbb".to_string()),
             remark: Some("bbb".to_string()),
         };
         let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, &update_bw_group)
+            BwGroup::update_group_by_group_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -190,12 +190,12 @@ mod tests {
         scripts("users", "groups")
     ))]
     async fn test_delete_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
-        let delete_bw_group = DeleteBwGroupSchema {
+        let item = DeleteBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
         let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
+            BwGroup::delete_group_by_group_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -211,22 +211,22 @@ mod tests {
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
         assert_eq!(count.unwrap(), 2);
-        let new_bw_group = CreateBwGroupSchema {
+        let item = CreateBwGroupSchema {
             account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
             remark: Some("aaa".to_string()),
         };
-        BwGroup::create_bw_group(&pool, &new_bw_group)
+        BwGroup::create_bw_group(&pool, &item)
             .await
             .unwrap();
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
         assert_eq!(count.unwrap(), 3);
-        let delete_bw_group = DeleteBwGroupSchema {
+        let item = DeleteBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
-        BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
+        BwGroup::delete_group_by_group_id(&pool, &item)
             .await
             .unwrap();
         let count =
@@ -241,11 +241,11 @@ mod tests {
         scripts("users", "groups")
     ))]
     async fn test_fetch_group_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
-        let read_bw_group = ReadBwGroupSchema {
+        let item = ReadBwGroupSchema {
             group_ids: vec![GROUP_ID_1, GROUP_ID_2],
             account_id: ACCOUNT_ID,
         };
-        let groups = BwGroup::fetch_group_info_by_ids(&pool, &read_bw_group)
+        let groups = BwGroup::fetch_group_info_by_ids(&pool, &item)
             .await
             .unwrap();
         assert_eq!(groups.len(), 2);
@@ -260,12 +260,12 @@ mod tests {
     async fn test_create_group_with_invalid_input(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let new_bw_group = CreateBwGroupSchema {
+        let item = CreateBwGroupSchema {
             account_id: 0,        // Nonexistent account_id
             name: "".to_string(), // Empty name
             remark: Some("aaa".to_string()),
         };
-        let result = BwGroup::create_bw_group(&pool, &new_bw_group).await;
+        let result = BwGroup::create_bw_group(&pool, &item).await;
         assert!(result.is_err());
 
         Ok(())
@@ -291,14 +291,14 @@ mod tests {
         scripts("users", "groups")
     ))]
     async fn test_update_nonexistent_group(pool: PgPool) -> sqlx::Result<()> {
-        let update_bw_group = UpdateBwGroupSchema {
+        let item = UpdateBwGroupSchema {
             group_id: 0, // Nonexistent group_id
             account_id: ACCOUNT_ID,
             name: Some("bbb".to_string()),
             remark: Some("bbb".to_string()),
         };
         let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, &update_bw_group)
+            BwGroup::update_group_by_group_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);
@@ -313,15 +313,15 @@ mod tests {
     async fn test_delete_already_deleted_group(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let delete_bw_group = DeleteBwGroupSchema {
+        let item = DeleteBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
-        BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
+        BwGroup::delete_group_by_group_id(&pool, &item)
             .await
             .unwrap();
         let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, &delete_bw_group)
+            BwGroup::delete_group_by_group_id(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);

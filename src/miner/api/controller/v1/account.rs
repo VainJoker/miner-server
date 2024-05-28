@@ -44,14 +44,14 @@ pub async fn register_user_handler(
     }
 
     let hashed_password = crypto::hash_password(body.password.as_bytes())?;
-    let new_bw_account = CreateBwAccountSchema {
+    let item = CreateBwAccountSchema {
         name: body.name,
         email: body.email,
         password: hashed_password,
     };
 
     let user =
-        BwAccount::register_account(state.get_db(), &new_bw_account).await?;
+        BwAccount::register_account(state.get_db(), &item).await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -232,13 +232,13 @@ pub async fn change_password_handler(
 
     if let Some(active_code_stored) = state.redis.get(&key).await? {
         if active_code_stored == body.code {
-            let reset_password = ResetPasswordSchema {
+            let item = ResetPasswordSchema {
                 account_id: claims.uid,
                 password: crypto::hash_password(body.password.as_bytes())?,
             };
             BwAccount::update_password_by_account_id(
                 state.get_db(),
-                &reset_password,
+                &item,
             )
             .await?;
             state.redis.del(&key).await?;

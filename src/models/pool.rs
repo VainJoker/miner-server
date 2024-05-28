@@ -156,7 +156,7 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
     async fn test_create_bw_pool(pool: PgPool) -> sqlx::Result<()> {
-        let new_bw_pool = CreateBwPoolSchema {
+        let item = CreateBwPoolSchema {
             account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
             settings: Some(vec![Setting {
@@ -168,7 +168,7 @@ mod tests {
                 suffix: true,
             }]),
         };
-        let a = BwPool::create_bw_pool(&pool, &new_bw_pool).await.unwrap();
+        let a = BwPool::create_bw_pool(&pool, &item).await.unwrap();
         assert_eq!(a.name, "aaa");
 
         Ok(())
@@ -186,7 +186,7 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "pool")))]
     async fn test_update_pool_by_pool_id(pool: PgPool) -> sqlx::Result<()> {
-        let update_bw_pool = UpdateBwPoolSchema {
+        let item = UpdateBwPoolSchema {
             pool_id: POLICY_ID_1,
             account_id: ACCOUNT_ID,
             name: Some("bbb".to_string()),
@@ -200,7 +200,7 @@ mod tests {
             }]),
         };
         let rows_affected =
-            BwPool::update_pool_by_pool_id(&pool, update_bw_pool)
+            BwPool::update_pool_by_pool_id(&pool, item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -210,12 +210,12 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "pool")))]
     async fn test_delete_pool_by_pool_id(pool: PgPool) -> sqlx::Result<()> {
-        let delete_bw_pool = DeleteBwPoolSchema {
+        let item = DeleteBwPoolSchema {
             pool_id: POLICY_ID_1,
             account_id: ACCOUNT_ID,
         };
         let rows_affected =
-            BwPool::delete_pool_by_pool_id(&pool, delete_bw_pool)
+            BwPool::delete_pool_by_pool_id(&pool, item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -233,11 +233,11 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "pool")))]
     async fn test_fetch_pool_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
-        let read_bw_pool = ReadBwPoolSchema {
+        let item = ReadBwPoolSchema {
             pool_ids: vec![POLICY_ID_1, POLICY_ID_2],
             account_id: ACCOUNT_ID,
         };
-        let policies = BwPool::fetch_pool_info_by_ids(&pool, read_bw_pool)
+        let policies = BwPool::fetch_pool_info_by_ids(&pool, item)
             .await
             .unwrap();
         assert_eq!(policies.len(), 2);

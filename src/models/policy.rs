@@ -148,7 +148,7 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
     async fn test_create_bw_policy(pool: PgPool) -> sqlx::Result<()> {
-        let new_bw_policy = CreateBwPolicySchema {
+        let item = CreateBwPolicySchema {
             account_id: ACCOUNT_ID,
             name: "aaa".to_string(),
             settings: Some(vec![Setting {
@@ -156,7 +156,7 @@ mod tests {
                 mode: "test".to_string(),
             }]),
         };
-        let a = BwPolicy::create_bw_policy(&pool, &new_bw_policy)
+        let a = BwPolicy::create_bw_policy(&pool, &item)
             .await
             .unwrap();
         assert_eq!(a.name, "aaa");
@@ -182,7 +182,7 @@ mod tests {
         scripts("users", "policy")
     ))]
     async fn test_update_policy_by_policy_id(pool: PgPool) -> sqlx::Result<()> {
-        let update_bw_policy = UpdateBwPolicySchema {
+        let item = UpdateBwPolicySchema {
             policy_id: POLICY_ID_1,
             account_id: ACCOUNT_ID,
             name: Some("bbb".to_string()),
@@ -192,7 +192,7 @@ mod tests {
             }]),
         };
         let rows_affected =
-            BwPolicy::update_policy_by_policy_id(&pool, update_bw_policy)
+            BwPolicy::update_policy_by_policy_id(&pool, item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -205,12 +205,12 @@ mod tests {
         scripts("users", "policy")
     ))]
     async fn test_delete_policy_by_policy_id(pool: PgPool) -> sqlx::Result<()> {
-        let delete_bw_policy = DeleteBwPolicySchema {
+        let item = DeleteBwPolicySchema {
             policy_id: POLICY_ID_1,
             account_id: ACCOUNT_ID,
         };
         let rows_affected =
-            BwPolicy::delete_policy_by_policy_id(&pool, delete_bw_policy)
+            BwPolicy::delete_policy_by_policy_id(&pool, item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -236,12 +236,12 @@ mod tests {
         scripts("users", "policy")
     ))]
     async fn test_fetch_policy_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
-        let read_bw_policy = ReadBwPolicySchema {
+        let item = ReadBwPolicySchema {
             policy_ids: vec![POLICY_ID_1, POLICY_ID_2],
             account_id: ACCOUNT_ID,
         };
         let policies =
-            BwPolicy::fetch_policy_info_by_ids(&pool, read_bw_policy)
+            BwPolicy::fetch_policy_info_by_ids(&pool, item)
                 .await
                 .unwrap();
         assert_eq!(policies.len(), 2);
