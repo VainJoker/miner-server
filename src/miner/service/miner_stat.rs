@@ -99,7 +99,7 @@ impl CoinStat<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    
 
     #[test]
     fn get_coin_stat_works() {

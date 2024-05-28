@@ -6,4 +6,3 @@ pub mod news;
 pub mod policy;
 pub mod product;
 pub mod template;
-pub mod jwt;

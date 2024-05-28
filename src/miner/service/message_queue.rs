@@ -1,17 +1,13 @@
-use std::sync::Arc;
 
 use crate::{
     library::{error::AppResult, mailor::Email, mqer::Subscriber},
-    miner::bootstrap::{
-        constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
-        AppState,
-    },
+    miner::bootstrap::constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
 };
-use crate::library::{MQ, Mqer};
+use crate::library::Mqer;
 
 #[derive(Clone)]
 pub struct Server{
-    mqer: Mqer
+    pub mqer: Mqer
 }
 
 impl Server {

@@ -19,7 +19,7 @@ use crate::{
         UpdateBwGroupSchema,
     },
 };
-use crate::miner::entity::jwt::Claims;
+use crate::miner::service::jwt_service::Claims;
 
 pub async fn create_group_handler(
     State(state): State<Arc<AppState>>,

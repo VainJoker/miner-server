@@ -30,7 +30,7 @@ use crate::{
         types::AccountStatus,
     },
 };
-use crate::miner::entity::jwt::{Claims, RefreshTokenRequest};
+use crate::miner::service::jwt_service::{Claims, RefreshTokenRequest};
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,
@@ -142,10 +142,10 @@ pub async fn send_active_account_email_handler(
     let email_json = serde_json::to_string(&email).map_err(|e| {
         anyhow::anyhow!("Error occurred while sending email: {}", e)
     })?;
-    // state
-    //     .get_mq()?
-    //     .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
-    //     .await?;
+    state
+        .get_mq()?
+        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
+        .await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -178,10 +178,10 @@ pub async fn send_reset_password_email_handler(
     let email_json = serde_json::to_string(&email).map_err(|e| {
         anyhow::anyhow!("Error occurred while sending email: {}", e)
     })?;
-    // state
-    //     .get_mq()?
-    //     .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
-    //     .await?;
+    state
+        .get_mq()?
+        .basic_send(MQ_SEND_EMAIL_QUEUE, &email_json)
+        .await?;
 
     Ok(SuccessResponse {
         msg: "success",

@@ -95,7 +95,9 @@ pub fn init(cfg_file: &String) {
     // Attempt to build the configuration from the file.
     // Panic if any errors occur during loading or validation.
     let cfg = Config::builder()
-        .add_source(config::File::with_name(path.to_str().unwrap()))
+        .add_source(config::File::with_name(path.to_str().unwrap_or_else(|| {
+            panic!("💥 Failed to build configuration: {cfg_file}");
+        })))
         .build()
         .unwrap_or_else(|e| {
             panic!("💥 Failed to build configuration: {e}");

@@ -44,8 +44,9 @@ impl<'a> Email<'a> {
             })?)
             .subject(self.subject)
             .header(ContentType::TEXT_PLAIN) // ContentType::TEXT_HTML
-            .body(self.body.to_string())
-            .unwrap();
+            .body(self.body.to_string()).map_err(|e| {
+            anyhow::anyhow!("Error occurred while sending message: {}", e)
+        })?;
         let creds = Credentials::new(
             self.config.username.clone(),
             self.config.password.clone(),
@@ -71,7 +72,9 @@ impl<'a> Email<'a> {
             .subject(self.subject)
             .header(ContentType::TEXT_PLAIN) // ContentType::TEXT_HTML
             .body(self.body.to_string())
-            .unwrap();
+            .map_err(|e| {
+                anyhow::anyhow!("Error occurred while sending message: {}", e)
+            })?;
         let creds = Credentials::new(
             self.config.username.clone(),
             self.config.password.clone(),

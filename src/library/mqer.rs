@@ -69,9 +69,6 @@ impl ConsumerDelegate for Subscriber {
                     return;
                 }
 
-                // if !mqer_cloned.running.read().map_or(false, |r| *r) {
-                //     return;
-                // }
                 let message = String::from_utf8_lossy(&delivery.data);
                 (func_cloned)(message.to_string());
                 if let Err(e) = delivery.ack(BasicAckOptions::default()).await {
@@ -96,7 +93,7 @@ impl Mqer {
         };
         match deadpool.create_pool(Some(Runtime::Tokio1)) {
             Ok(pool) => {
-                tracing::info!("🚀 Connection to the mq is successful!");
+                tracing::info!("🚀 Connection to the rabbit_mq is successful!");
                 Self {
                     pool,
                     running: Arc::new(AtomicBool::new(true)),

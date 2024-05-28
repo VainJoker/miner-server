@@ -4,7 +4,7 @@ use crate::models::{
     account::BwAccount,
     types::{Currency, Language},
 };
-use crate::miner::entity::jwt::TokenSchema;
+use crate::miner::service::jwt_service::TokenSchema;
 
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {

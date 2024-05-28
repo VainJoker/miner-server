@@ -3,21 +3,17 @@ pub mod bootstrap;
 pub mod entity;
 pub mod service;
 
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
 
 use crate::{
     library::cfg,
     miner::{
         api::route,
         bootstrap::{shutdown_signal, AppState},
-        service::mq_customer,
     },
 };
-use crate::miner::service::Server;
-
 
 pub async fn serve() {
     let cfg = cfg::config();
@@ -40,13 +36,11 @@ pub async fn serve() {
         ))
     );
 
-    // Run the MQCustomer
-    // tokio::spawn(mq_customer::MqCustomer::serve(miner_state.clone()));
 
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal)
+        .with_graceful_shutdown(shutdown_signal(miner_state.clone()))
         .await
         .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
 }
