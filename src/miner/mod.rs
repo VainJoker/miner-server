@@ -36,7 +36,7 @@ pub async fn serve() {
         ))
     );
 
-
+    miner_state.serve().await;
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)
@@ -44,60 +44,3 @@ pub async fn serve() {
         .await
         .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
 }
-
-
-// pub struct Server {
-//     api: Arc<Mutex<api::Server>>,
-//     mqtt: Arc<Mutex<mqtt::Server>>,
-//     cancel: Option<oneshot::Sender<()>>,
-// }
-//
-// impl Server {
-//     pub fn new() -> Result<Server, Box<dyn std::error::Error>> {
-//         // Initialize MySQL and Redis clients here
-//         let db = Arc::new(Mutex::new(mysqlx::default_client()?));
-//         let redis = Arc::new(Mutex::new(redisx::default_client()?));
-//
-//         instance::set_db(db.clone());
-//         instance::set_redis(redis.clone());
-//
-//         let api = Arc::new(Mutex::new(api::new()));
-//         let mqtt = Arc::new(Mutex::new(mqtt::new(/* mqtt options here */)));
-//
-//         Ok(Server {
-//             api,
-//             mqtt,
-//             cancel: None,
-//         })
-//     }
-//
-//     pub async fn run(&mut self) {
-//         let (cancel_tx, cancel_rx) = oneshot::channel();
-//         self.cancel = Some(cancel_tx);
-//
-//         let api_future = {
-//             let api = self.api.clone();
-//             tokio::spawn(async move {
-//                 api.lock().unwrap().run(cancel_rx).await;
-//             })
-//         };
-//
-//         let mqtt_future = {
-//             let mqtt = self.mqtt.clone();
-//             tokio::spawn(async move {
-//                 mqtt.lock().unwrap().run(cancel_rx).await;
-//             })
-//         };
-//
-//         let _ = tokio::try_join!(api_future, mqtt_future);
-//     }
-//
-//     pub fn shutdown(&mut self) {
-//         if let Some(cancel) = self.cancel.take() {
-//             let _ = cancel.send(());
-//         }
-//
-//         self.api.lock().unwrap().shutdown();
-//         self.mqtt.lock().unwrap().shutdown();
-//     }
-// }

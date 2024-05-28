@@ -1,11 +1,14 @@
 use std::time::Duration;
+
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::interval;
-use crate::library::cfg;
 
-use crate::library::error::{AppError, AppResult};
+use crate::library::{
+    cfg,
+    error::{AppError, AppResult},
+};
 
-pub struct Server<'a>{
+pub struct Server<'a> {
     exchange_rate: ExchangeRate<'a>,
 }
 
@@ -14,10 +17,9 @@ impl Server<'_> {
         let cfg = cfg::config();
         let exchange_rate_host = &cfg.miner.exchange_rate.host;
         let exchange_rate_key = &cfg.miner.exchange_rate.key;
-        let exchange_rate = ExchangeRate::new(exchange_rate_host, exchange_rate_key);
-        Server{
-            exchange_rate
-        }
+        let exchange_rate =
+            ExchangeRate::new(exchange_rate_host, exchange_rate_key);
+        Server { exchange_rate }
     }
 
     pub async fn serve(&self) -> AppResult<()> {
@@ -26,9 +28,11 @@ impl Server<'_> {
         loop {
             interval.tick().await;
 
-            match self.exchange_rate.get_rate() {
+            match self.exchange_rate.get_rate().await {
                 Ok(_) => tracing::trace!("Successfully fetched exchange rate"),
-                Err(e) => tracing::error!("Error fetching exchange rate: {:?}", e),
+                Err(e) => {
+                    tracing::error!("Error fetching exchange rate: {:?}", e)
+                }
             }
         }
     }
@@ -36,7 +40,6 @@ impl Server<'_> {
     pub fn shutdown(&self) -> AppResult<()> {
         Ok(())
     }
-
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -400,10 +403,10 @@ impl ExchangeRate<'_> {
         ExchangeRate { host, key }
     }
 
-    pub fn get_rate(&self) -> AppResult<ConversionRates> {
+    pub async fn get_rate(&self) -> AppResult<ConversionRates> {
         let url = format!("{}/{}/{}", self.host, self.key, "latest/USD");
-        let client = reqwest::blocking::Client::new();
-        let response = client.get(&url).send().map_err(|e| {
+        let client = reqwest::Client::new();
+        let response = client.get(url).send().await.map_err(|e| {
             let es =
                 format!("Error occurred while getting exchange rate : {}", e);
             tracing::error!(es);
@@ -418,7 +421,7 @@ impl ExchangeRate<'_> {
             tracing::error!(es);
             return Err(AppError::Anyhow(anyhow::anyhow!(es)));
         }
-        let body: ApiResponseBody = response.json().map_err(|e| {
+        let body: ApiResponseBody = response.json().await.map_err(|e| {
             let es =
                 format!("Error occurred while getting exchange rate : {}", e);
             tracing::error!(es);
@@ -432,11 +435,11 @@ impl ExchangeRate<'_> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn get_rate_works() {
+    #[tokio::test]
+    async fn get_rate_works() {
         let host = "https://v6.exchangerate-api.com/v6";
         let key = "83b2f3250fcbb02d93d4e3bf";
-        let rate = ExchangeRate::new(host, key).get_rate().unwrap();
+        let _rate = ExchangeRate::new(host, key).get_rate().await.unwrap();
         // eprintln!("{:#?}",rate);
     }
 }

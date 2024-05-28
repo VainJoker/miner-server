@@ -1,20 +1,16 @@
-
 use crate::{
-    library::{error::AppResult, mailor::Email, mqer::Subscriber},
+    library::{error::AppResult, mailor::Email, mqer::Subscriber, Mqer},
     miner::bootstrap::constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
 };
-use crate::library::Mqer;
 
 #[derive(Clone)]
-pub struct Server{
-    pub mqer: Mqer
+pub struct Server {
+    pub mqer: Mqer,
 }
 
 impl Server {
     pub fn init() -> Server {
-        Server{
-            mqer: Mqer::init()
-        }
+        Server { mqer: Mqer::init() }
     }
 
     pub async fn serve(&self) -> AppResult<()> {
@@ -50,7 +46,8 @@ impl Server {
             }
         };
         let delegate = Subscriber::new(func, self.mqer.clone());
-        Ok(self.mqer
+        Ok(self
+            .mqer
             .basic_receive(MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG, delegate)
             .await?)
     }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, Json, response::IntoResponse};
+use axum::{extract::State, response::IntoResponse, Json};
 
 use crate::{
     library::{
@@ -14,8 +14,8 @@ use crate::{
     },
     miner::{
         bootstrap::{
-            AppState,
             constants::{self, MQ_SEND_EMAIL_QUEUE},
+            AppState,
         },
         entity::{
             account::{
@@ -24,13 +24,13 @@ use crate::{
             },
             common::SuccessResponse,
         },
+        service::jwt_service::{Claims, RefreshTokenRequest},
     },
     models::{
         account::{BwAccount, CreateBwAccountSchema, ResetPasswordSchema},
         types::AccountStatus,
     },
 };
-use crate::miner::service::jwt_service::{Claims, RefreshTokenRequest};
 
 pub async fn register_user_handler(
     State(state): State<Arc<AppState>>,

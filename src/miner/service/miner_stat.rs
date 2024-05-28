@@ -1,12 +1,15 @@
 use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 use tokio::time::interval;
-use crate::library::cfg;
 
-use crate::library::error::{AppError, AppResult};
+use crate::library::{
+    cfg,
+    error::{AppError, AppResult},
+};
 
-pub struct Server<'a>{
-    coin_stat: CoinStat<'a>
+pub struct Server<'a> {
+    coin_stat: CoinStat<'a>,
 }
 
 impl Server<'_> {
@@ -15,9 +18,7 @@ impl Server<'_> {
         let coin_stat_host = &cfg.miner.coin_stat.host;
         let coins = cfg.miner.coins.clone();
         let coin_stat = CoinStat::new(coin_stat_host, coins);
-        Server{
-            coin_stat
-        }
+        Server { coin_stat }
     }
 
     pub async fn serve(&self) -> AppResult<()> {
@@ -36,7 +37,6 @@ impl Server<'_> {
     pub fn shutdown(&self) -> AppResult<()> {
         Ok(())
     }
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,17 +66,15 @@ pub struct CoinStat<'a> {
 pub type CoinSymbol<'a> = &'a str;
 
 impl CoinStat<'_> {
-    pub fn new<'a>(host: &'a str, coins: Vec<String>) -> CoinStat<'a> {
+    pub fn new(host: &str, coins: Vec<String>) -> CoinStat {
         let coins = coins.join(",");
         CoinStat { host, coins }
     }
 
-    pub fn get_data(
-        &self,
-    ) -> AppResult<Vec<CoinData>> {
+    pub fn get_data(&self) -> AppResult<Vec<CoinData>> {
         let url = format!("{}?list={}", self.host, self.coins);
         let client = reqwest::blocking::Client::new();
-        let response = client.get(&url).send().map_err(|e| {
+        let response = client.get(url).send().map_err(|e| {
             let es = format!("Error occurred while getting coin stat : {}", e);
             tracing::error!(es);
             anyhow::anyhow!(es)
@@ -99,7 +97,6 @@ impl CoinStat<'_> {
 
 #[cfg(test)]
 mod tests {
-    
 
     #[test]
     fn get_coin_stat_works() {

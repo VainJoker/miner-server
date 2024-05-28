@@ -3,8 +3,10 @@ use axum::{
     response::Response,
 };
 
-use crate::library::error::{AppError::AuthError, AppResult, AuthInnerError};
-use crate::miner::service::jwt_service::{Claims, TokenType};
+use crate::{
+    library::error::{AppError::AuthError, AppResult, AuthInnerError},
+    miner::service::jwt_service::{Claims, TokenType},
+};
 
 pub async fn handle(request: Request, next: Next) -> AppResult<Response> {
     let token = request
