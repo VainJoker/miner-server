@@ -36,7 +36,7 @@ pub async fn serve() {
         ))
     );
 
-    miner_state.serve().await;
+    miner_state.clone().serve().await;
 
     // Run the server with graceful shutdown
     axum::serve(listener, app)

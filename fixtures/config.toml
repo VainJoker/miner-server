@@ -21,7 +21,7 @@ key = "83b2f3250fcbb02d93d4e3bf"
 frequency = 3600
 
 [miner.coin_stat]
-host = "https://api.coingecko.com/api/v3"
+host = "https://api.minerstat.com/v2/coins"
 frequency = 60
 
 [log]

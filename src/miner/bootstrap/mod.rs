@@ -5,14 +5,14 @@ use std::sync::Arc;
 use tokio::signal;
 
 use crate::{
-    library::{dber::DB, error::AppResult, Dber, Mqer, Redis, Redisor},
+    library::{dber::DB, error::AppResult, Dber, Mqer, Redisor},
     miner::service::Services,
 };
 
 pub struct AppState {
     pub db: Dber,
     pub redis: Redisor,
-    pub services: Services<'static>,
+    pub services: Services,
 }
 
 impl AppState {
@@ -24,8 +24,8 @@ impl AppState {
         }
     }
 
-    pub async fn serve(&self) {
-        match self.services.serve().await {
+    pub async fn serve(self: Arc<Self>) {
+        match self.services.clone().serve(self).await {
             Ok(_) => (),
             Err(e) => {
                 tracing::error!("Failed to start services: {}", e);
@@ -37,8 +37,8 @@ impl AppState {
         &self.db.pool
     }
 
-    pub async fn get_redis(&self) -> AppResult<Redis> {
-        Ok(self.redis.get_conn().await?)
+    pub const fn get_redis(&self) -> &Redisor {
+        &self.redis
     }
 
     pub fn get_mq(&self) -> AppResult<Mqer> {

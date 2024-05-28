@@ -1,18 +1,21 @@
-use crate::library::error::AppResult;
+use std::sync::Arc;
+
+use crate::{library::error::AppResult, miner::bootstrap::AppState};
 
 pub mod exchange_rate;
 pub mod jwt_service;
 pub mod message_queue;
 pub mod miner_stat;
 
-pub struct Services<'a> {
-    pub exchange_rate: exchange_rate::Server<'a>,
-    pub miner_stat: miner_stat::Server<'a>,
+#[derive(Clone)]
+pub struct Services {
+    pub exchange_rate: exchange_rate::Server,
+    pub miner_stat: miner_stat::Server,
     pub message_queue: message_queue::Server,
 }
 
-impl Services<'_> {
-    pub fn init() -> Services<'static> {
+impl Services {
+    pub fn init() -> Services {
         Services {
             exchange_rate: exchange_rate::Server::init(),
             miner_stat: miner_stat::Server::init(),
@@ -20,9 +23,9 @@ impl Services<'_> {
         }
     }
 
-    pub async fn serve(&self) -> AppResult<()> {
-        // self.exchange_rate.serve().await?;
-        // self.miner_stat.serve().await?;
+    pub async fn serve(&self, app_state: Arc<AppState>) -> AppResult<()> {
+        self.exchange_rate.clone().serve(app_state.clone())?;
+        self.miner_stat.clone().serve(app_state.clone())?;
         self.message_queue.serve().await?;
         Ok(())
     }

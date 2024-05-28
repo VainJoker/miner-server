@@ -1,40 +1,66 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::interval;
 
-use crate::library::{
-    cfg,
-    error::{AppError, AppResult},
+use crate::{
+    library::{
+        cfg,
+        error::{AppError, AppResult},
+    },
+    miner::bootstrap::AppState,
 };
 
-pub struct Server<'a> {
-    exchange_rate: ExchangeRate<'a>,
+#[derive(Clone)]
+pub struct Server {
+    exchange_rate: Arc<ExchangeRate>,
 }
 
-impl Server<'_> {
-    pub fn init() -> Server<'static> {
+impl Server {
+    pub fn init() -> Server {
         let cfg = cfg::config();
         let exchange_rate_host = &cfg.miner.exchange_rate.host;
         let exchange_rate_key = &cfg.miner.exchange_rate.key;
-        let exchange_rate =
-            ExchangeRate::new(exchange_rate_host, exchange_rate_key);
-        Server { exchange_rate }
+        let exchange_duration =
+            Duration::from_secs(cfg.miner.exchange_rate.frequency);
+        let exchange_rate = ExchangeRate::new(
+            exchange_rate_host,
+            exchange_rate_key,
+            exchange_duration,
+        );
+        Server {
+            exchange_rate: Arc::new(exchange_rate),
+        }
     }
+    pub fn serve(self, app_state: Arc<AppState>) -> AppResult<()> {
+        let exchange_rate = self.exchange_rate;
 
-    pub async fn serve(&self) -> AppResult<()> {
-        let mut interval = interval(Duration::from_secs(60 * 60));
+        tokio::spawn(async move {
+            let mut interval = interval(exchange_rate.duration);
 
-        loop {
-            interval.tick().await;
+            loop {
+                interval.tick().await;
 
-            match self.exchange_rate.get_rate().await {
-                Ok(_) => tracing::trace!("Successfully fetched exchange rate"),
-                Err(e) => {
-                    tracing::error!("Error fetching exchange rate: {:?}", e)
+                match exchange_rate.get_rate().await {
+                    Ok(res) => {
+                        app_state
+                            .get_redis()
+                            .set(
+                                "exchange_rate",
+                                &serde_json::to_string(&res).unwrap(),
+                            )
+                            .await
+                            .unwrap();
+                        tracing::trace!("Successfully fetched exchange rate")
+                    }
+                    Err(e) => {
+                        tracing::error!("Error fetching exchange rate: {:?}", e)
+                    }
                 }
             }
-        }
+        });
+
+        Ok(())
     }
 
     pub fn shutdown(&self) -> AppResult<()> {
@@ -43,9 +69,10 @@ impl Server<'_> {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ExchangeRate<'a> {
-    pub host: &'a str,
-    pub key: &'a str,
+pub struct ExchangeRate {
+    pub host: String,
+    pub key: String,
+    pub duration: Duration,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -398,9 +425,17 @@ pub struct ConversionRates {
     pub zwl: f64,
 }
 
-impl ExchangeRate<'_> {
-    pub fn new<'a>(host: &'a str, key: &'a str) -> ExchangeRate<'a> {
-        ExchangeRate { host, key }
+impl ExchangeRate {
+    pub fn new<'a>(
+        host: &'a str,
+        key: &'a str,
+        duration: Duration,
+    ) -> ExchangeRate {
+        ExchangeRate {
+            host: host.to_string(),
+            key: key.to_string(),
+            duration,
+        }
     }
 
     pub async fn get_rate(&self) -> AppResult<ConversionRates> {
@@ -439,7 +474,10 @@ mod tests {
     async fn get_rate_works() {
         let host = "https://v6.exchangerate-api.com/v6";
         let key = "83b2f3250fcbb02d93d4e3bf";
-        let _rate = ExchangeRate::new(host, key).get_rate().await.unwrap();
+        let _rate = ExchangeRate::new(host, key, Duration::from_secs(60 * 60))
+            .get_rate()
+            .await
+            .unwrap();
         // eprintln!("{:#?}",rate);
     }
 }
