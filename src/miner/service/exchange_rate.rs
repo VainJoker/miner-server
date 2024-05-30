@@ -36,6 +36,7 @@ impl Server {
         let exchange_rate = self.exchange_rate;
 
         tokio::spawn(async move {
+            let mut redis = app_state.get_redis().await.unwrap();
             let mut interval = interval(exchange_rate.duration);
 
             loop {
@@ -43,8 +44,7 @@ impl Server {
 
                 match exchange_rate.get_rate().await {
                     Ok(res) => {
-                        app_state
-                            .get_redis()
+                        redis
                             .set(
                                 "exchange_rate",
                                 &serde_json::to_string(&res).unwrap(),

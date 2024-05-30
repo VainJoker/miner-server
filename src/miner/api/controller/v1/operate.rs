@@ -11,10 +11,9 @@ use crate::{
     },
 };
 
-#[axum::debug_handler]
 pub async fn operate_handler(
-    State(state): State<Arc<AppState>>,
-    claims: Claims,
+    State(_state): State<Arc<AppState>>,
+    _claims: Claims,
     Json(body): Json<OperateRequest>,
 ) -> AppResult<impl IntoResponse> {
     Ok(SuccessResponse {

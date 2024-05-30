@@ -200,9 +200,7 @@ mod tests {
             }]),
         };
         let rows_affected =
-            BwPool::update_pool_by_pool_id(&pool, item)
-                .await
-                .unwrap();
+            BwPool::update_pool_by_pool_id(&pool, item).await.unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
@@ -215,9 +213,7 @@ mod tests {
             account_id: ACCOUNT_ID,
         };
         let rows_affected =
-            BwPool::delete_pool_by_pool_id(&pool, item)
-                .await
-                .unwrap();
+            BwPool::delete_pool_by_pool_id(&pool, item).await.unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
@@ -237,9 +233,8 @@ mod tests {
             pool_ids: vec![POLICY_ID_1, POLICY_ID_2],
             account_id: ACCOUNT_ID,
         };
-        let policies = BwPool::fetch_pool_info_by_ids(&pool, item)
-            .await
-            .unwrap();
+        let policies =
+            BwPool::fetch_pool_info_by_ids(&pool, item).await.unwrap();
         assert_eq!(policies.len(), 2);
 
         Ok(())

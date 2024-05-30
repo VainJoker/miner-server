@@ -10,11 +10,14 @@ use tower_http::timeout::TimeoutLayer;
 use super::{
     controller::{
         handler_404,
-        v1::{account::{
-            change_password_handler, refresh_token_handler,
-            send_reset_password_email_handler,
-            verify_active_account_code_handler,
-        }, operate::operate_handler},
+        v1::{
+            account::{
+                change_password_handler, refresh_token_handler,
+                send_reset_password_email_handler,
+                verify_active_account_code_handler,
+            },
+            operate::operate_handler,
+        },
     },
     middleware::{auth, basic_auth, cors, log, req_id},
 };
@@ -65,7 +68,6 @@ pub fn init(miner_state: Arc<AppState>) -> Router {
         .route("/groups/update", post(update_group_handler))
         .route("/groups/delete", post(delete_group_handler))
         .route("/groups/ids", post(get_groups_by_ids_handler))
-
         .route("/operate/do", post(operate_handler))
         .route_layer(from_fn_with_state(miner_state.clone(), auth::handle))
         .with_state(miner_state.clone());

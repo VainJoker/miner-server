@@ -35,14 +35,13 @@ impl Server {
 
         tokio::spawn(async move {
             let mut interval = interval(coin_stat.duration);
-
+            let mut redis = app_state.get_redis().await.unwrap();
             loop {
                 interval.tick().await;
 
                 match coin_stat.get_data().await {
                     Ok(res) => {
-                        app_state
-                            .get_redis()
+                        redis
                             .set(
                                 "coin_stat",
                                 &serde_json::to_string(&res).unwrap(),

@@ -50,8 +50,7 @@ pub async fn register_user_handler(
         password: hashed_password,
     };
 
-    let user =
-        BwAccount::register_account(state.get_db(), &item).await?;
+    let user = BwAccount::register_account(state.get_db(), &item).await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -119,8 +118,9 @@ pub async fn send_active_account_email_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
+    let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
-    if state.redis.get(&key).await?.is_some() {
+    if redis.get(&key).await?.is_some() {
         return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
     if claims.status != AccountStatus::Inactive {
@@ -129,8 +129,7 @@ pub async fn send_active_account_email_handler(
     let active_code = crypto::random_words(6);
     let body = format!("Active Code: {}", active_code);
 
-    state
-        .redis
+    redis
         .set_ex(
             &format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY),
             &active_code,
@@ -157,16 +156,16 @@ pub async fn send_reset_password_email_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
+    let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
-    if state.redis.get(&key).await?.is_some() {
+    if redis.get(&key).await?.is_some() {
         return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
 
     let reset_password_code = crypto::random_words(6);
     let body = format!("ResetPassword Code: {}", reset_password_code);
 
-    state
-        .redis
+    redis
         .set_ex(
             &format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY),
             &reset_password_code,
@@ -194,16 +193,17 @@ pub async fn verify_active_account_code_handler(
     claims: Claims,
     Json(body): Json<ActiveAccountRequest>,
 ) -> AppResult<impl IntoResponse> {
+    let mut redis = state.get_redis().await?;
     if claims.status != AccountStatus::Inactive {
         return Err(AuthError(AuthInnerError::UserAlreadyActivated));
     }
 
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
-    if let Some(active_code_stored) = state.redis.get(&key).await? {
+    if let Some(active_code_stored) = redis.get(&key).await? {
         if active_code_stored == body.code {
             BwAccount::update_email_verified_at(state.get_db(), claims.uid)
                 .await?;
-            state.redis.del(&key).await?;
+            redis.del(&key).await?;
         } else {
             return Err(AuthError(AuthInnerError::WrongCode));
         }
@@ -215,7 +215,7 @@ pub async fn verify_active_account_code_handler(
 
     let tokens = Claims::generate_tokens_for_user(&user).await?;
 
-    state.redis.del(&key).await?;
+    redis.del(&key).await?;
 
     Ok(SuccessResponse {
         msg: "success",
@@ -228,20 +228,18 @@ pub async fn change_password_handler(
     claims: Claims,
     Json(body): Json<ResetPasswordRequest>,
 ) -> AppResult<impl IntoResponse> {
+    let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
 
-    if let Some(active_code_stored) = state.redis.get(&key).await? {
+    if let Some(active_code_stored) = redis.get(&key).await? {
         if active_code_stored == body.code {
             let item = ResetPasswordSchema {
                 account_id: claims.uid,
                 password: crypto::hash_password(body.password.as_bytes())?,
             };
-            BwAccount::update_password_by_account_id(
-                state.get_db(),
-                &item,
-            )
-            .await?;
-            state.redis.del(&key).await?;
+            BwAccount::update_password_by_account_id(state.get_db(), &item)
+                .await?;
+            redis.del(&key).await?;
         } else {
             return Err(AuthError(AuthInnerError::WrongCode));
         }

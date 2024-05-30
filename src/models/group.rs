@@ -144,18 +144,13 @@ mod tests {
             name: "aaa".to_string(),
             remark: Some("aaa".to_string()),
         };
-        let a = BwGroup::create_bw_group(&pool, &item)
-            .await
-            .unwrap();
+        let a = BwGroup::create_bw_group(&pool, &item).await.unwrap();
         assert_eq!(a.name, "aaa");
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_fetch_group_by_account_id(pool: PgPool) -> sqlx::Result<()> {
         let groups = BwGroup::fetch_group_by_account_id(&pool, ACCOUNT_ID)
             .await
@@ -165,10 +160,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_update_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
         let item = UpdateBwGroupSchema {
             group_id: GROUP_ID_1,
@@ -176,37 +168,29 @@ mod tests {
             name: Some("bbb".to_string()),
             remark: Some("bbb".to_string()),
         };
-        let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwGroup::update_group_by_group_id(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_delete_group_by_group_id(pool: PgPool) -> sqlx::Result<()> {
         let item = DeleteBwGroupSchema {
             group_id: GROUP_ID_1,
             account_id: ACCOUNT_ID,
         };
-        let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwGroup::delete_group_by_group_id(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_fetch_group_count(pool: PgPool) -> sqlx::Result<()> {
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
@@ -216,9 +200,7 @@ mod tests {
             name: "aaa".to_string(),
             remark: Some("aaa".to_string()),
         };
-        BwGroup::create_bw_group(&pool, &item)
-            .await
-            .unwrap();
+        BwGroup::create_bw_group(&pool, &item).await.unwrap();
         let count =
             BwGroup::fetch_group_count(&pool, ACCOUNT_ID).await.unwrap();
         assert_eq!(count.unwrap(), 3);
@@ -236,10 +218,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_fetch_group_info_by_ids(pool: PgPool) -> sqlx::Result<()> {
         let item = ReadBwGroupSchema {
             group_ids: vec![GROUP_ID_1, GROUP_ID_2],
@@ -253,10 +232,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_create_group_with_invalid_input(
         pool: PgPool,
     ) -> sqlx::Result<()> {
@@ -271,10 +247,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_fetch_group_by_nonexistent_account_id(
         pool: PgPool,
     ) -> sqlx::Result<()> {
@@ -286,10 +259,7 @@ mod tests {
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_update_nonexistent_group(pool: PgPool) -> sqlx::Result<()> {
         let item = UpdateBwGroupSchema {
             group_id: 0, // Nonexistent group_id
@@ -297,19 +267,15 @@ mod tests {
             name: Some("bbb".to_string()),
             remark: Some("bbb".to_string()),
         };
-        let rows_affected =
-            BwGroup::update_group_by_group_id(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwGroup::update_group_by_group_id(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 0);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_delete_already_deleted_group(
         pool: PgPool,
     ) -> sqlx::Result<()> {
@@ -320,19 +286,15 @@ mod tests {
         BwGroup::delete_group_by_group_id(&pool, &item)
             .await
             .unwrap();
-        let rows_affected =
-            BwGroup::delete_group_by_group_id(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwGroup::delete_group_by_group_id(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 0);
 
         Ok(())
     }
 
-    #[sqlx::test(fixtures(
-        path = "../../fixtures",
-        scripts("users", "groups")
-    ))]
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "group")))]
     async fn test_fetch_group_count_and_info_with_empty_group_list(
         pool: PgPool,
     ) -> sqlx::Result<()> {

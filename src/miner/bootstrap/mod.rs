@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::signal;
 
 use crate::{
-    library::{dber::DB, error::AppResult, Dber, Mqer, Redisor},
+    library::{dber::DB, error::AppResult, Dber, Mqer, Redis, Redisor},
     miner::service::Services,
 };
 
@@ -37,8 +37,8 @@ impl AppState {
         &self.db.pool
     }
 
-    pub const fn get_redis(&self) -> &Redisor {
-        &self.redis
+    pub async fn get_redis(&self) -> AppResult<Redis> {
+        Ok(self.redis.get_redis().await?)
     }
 
     pub fn get_mq(&self) -> AppResult<Mqer> {

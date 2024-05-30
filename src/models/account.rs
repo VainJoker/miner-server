@@ -188,9 +188,7 @@ mod tests {
             email: EMAIL.to_string(),
             password: PASSWORD.to_string(),
         };
-        let account = BwAccount::register_account(&pool, &item)
-            .await
-            .unwrap();
+        let account = BwAccount::register_account(&pool, &item).await.unwrap();
         assert_eq!(account.email, EMAIL);
         assert_eq!(account.name, NAME);
 

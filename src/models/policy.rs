@@ -156,9 +156,7 @@ mod tests {
                 mode: "test".to_string(),
             }]),
         };
-        let a = BwPolicy::create_bw_policy(&pool, &item)
-            .await
-            .unwrap();
+        let a = BwPolicy::create_bw_policy(&pool, &item).await.unwrap();
         assert_eq!(a.name, "aaa");
 
         Ok(())
@@ -191,10 +189,9 @@ mod tests {
                 mode: "test".to_string(),
             }]),
         };
-        let rows_affected =
-            BwPolicy::update_policy_by_policy_id(&pool, item)
-                .await
-                .unwrap();
+        let rows_affected = BwPolicy::update_policy_by_policy_id(&pool, item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
@@ -209,10 +206,9 @@ mod tests {
             policy_id: POLICY_ID_1,
             account_id: ACCOUNT_ID,
         };
-        let rows_affected =
-            BwPolicy::delete_policy_by_policy_id(&pool, item)
-                .await
-                .unwrap();
+        let rows_affected = BwPolicy::delete_policy_by_policy_id(&pool, item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
@@ -240,10 +236,9 @@ mod tests {
             policy_ids: vec![POLICY_ID_1, POLICY_ID_2],
             account_id: ACCOUNT_ID,
         };
-        let policies =
-            BwPolicy::fetch_policy_info_by_ids(&pool, item)
-                .await
-                .unwrap();
+        let policies = BwPolicy::fetch_policy_info_by_ids(&pool, item)
+            .await
+            .unwrap();
         assert_eq!(policies.len(), 2);
 
         Ok(())
