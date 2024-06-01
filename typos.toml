@@ -2,6 +2,7 @@
 
 [default.extend-words]
 default = "default"
+ALPH = "ALPH"
 
 [files]
-extend-exclude = ["logs/*","docker/*"]
+extend-exclude = ["logs/*","docker/*","fixtures"]

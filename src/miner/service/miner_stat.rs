@@ -30,7 +30,7 @@ impl Server {
         }
     }
 
-    pub fn serve(self, app_state: Arc<AppState>) -> AppResult<()> {
+    pub fn serve(self, app_state: Arc<AppState>) {
         let coin_stat = self.coin_stat;
 
         tokio::spawn(async move {
@@ -56,13 +56,9 @@ impl Server {
                 }
             }
         });
-
-        Ok(())
     }
 
-    pub fn shutdown(&self) -> AppResult<()> {
-        Ok(())
-    }
+    pub fn shutdown(&self) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -13,18 +13,22 @@ impl Server {
         Server { mqer: Mqer::init() }
     }
 
-    pub async fn serve(&self) -> AppResult<()> {
+    pub async fn serve(&self) {
         match self.email_sender().await {
             Ok(()) => {}
             Err(e) => {
                 tracing::error!("Error occurred while sending email: {}", e)
             }
         };
-        Ok(())
     }
 
-    pub fn shutdown(&self) -> AppResult<()> {
-        self.mqer.graceful_shutdown()
+    pub fn shutdown(&self) {
+        match self.mqer.graceful_shutdown() {
+            Ok(()) => {}
+            Err(e) => {
+                tracing::error!("Error occurred while closing MQ: {}", e)
+            }
+        }
     }
 
     pub async fn email_sender(&self) -> AppResult<()> {

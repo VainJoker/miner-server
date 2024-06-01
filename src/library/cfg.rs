@@ -67,6 +67,23 @@ pub struct CoinStatConfig {
     pub frequency: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MqttConfig {
+    pub host: String,
+    pub port: u16,
+    pub topics: Vec<TopicConfig>,
+    pub keepalive: u64,
+    pub client_id: String,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TopicConfig {
+    pub topics: String,
+    pub qos: u8,
+}
+
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct MinerConfig {
     pub env: String,
@@ -80,6 +97,7 @@ pub struct MinerConfig {
     pub exchange_rate: ExchangeRateConfig,
     pub coin_stat: CoinStatConfig,
     pub coins: Vec<String>,
+    pub mqtt: MqttConfig,
 }
 
 /// Initializes the application's configuration from the provided file.

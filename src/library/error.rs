@@ -15,6 +15,8 @@ pub enum AppInnerError {
     RedisError(#[from] RedisorError),
     #[error(transparent)]
     MQError(#[from] MqerError),
+    #[error("Json error: `{0}`")]
+    JsonError(#[from] serde_json::Error),
     #[error("Email error: `{0}`")]
     EmailError(#[from] lettre::transport::smtp::Error),
     #[error("Internal server error")]

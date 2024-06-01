@@ -20,18 +20,12 @@ impl AppState {
         Self {
             db: Dber::init().await,
             redis: Redisor::init(),
-            services: Services::init(),
+            services: Services::init().await,
         }
     }
 
     pub async fn serve(self: Arc<Self>) {
-        match self.services.clone().serve(self).await {
-            Ok(_) => (),
-            Err(e) => {
-                tracing::error!("Failed to start services: {}", e);
-                std::process::exit(1);
-            }
-        }
+        self.services.clone().serve(self).await;
     }
     pub const fn get_db(&self) -> &DB {
         &self.db.pool
@@ -72,11 +66,5 @@ pub async fn shutdown_signal(app_state: Arc<AppState>) {
             tracing::info!("Terminate signal received.");
         },
     }
-    match app_state.services.shutdown() {
-        Ok(_) => (),
-        Err(e) => {
-            tracing::error!("Failed to shutdown services: {}", e);
-            std::process::exit(1);
-        }
-    }
+    app_state.services.shutdown().await;
 }

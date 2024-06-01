@@ -32,7 +32,7 @@ impl Server {
             exchange_rate: Arc::new(exchange_rate),
         }
     }
-    pub fn serve(self, app_state: Arc<AppState>) -> AppResult<()> {
+    pub fn serve(self, app_state: Arc<AppState>) {
         let exchange_rate = self.exchange_rate;
 
         tokio::spawn(async move {
@@ -59,13 +59,9 @@ impl Server {
                 }
             }
         });
-
-        Ok(())
     }
 
-    pub fn shutdown(&self) -> AppResult<()> {
-        Ok(())
-    }
+    pub fn shutdown(&self) {}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
