@@ -106,6 +106,14 @@ impl Redis {
             .map_err(RedisorError::ExeError)?;
         Ok(())
     }
+
+    pub async fn expire(&mut self, key: &str, ttl: i64) -> InnerResult<()> {
+        self.connection
+            .expire::<_, ()>(key, ttl)
+            .await
+            .map_err(RedisorError::ExeError)?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -188,5 +196,20 @@ mod tests {
             redis.get_hash_keys("key5").await.unwrap(),
             Some(vec!["field1".to_string(), "field2".to_string()])
         );
+    }
+
+    #[tokio::test]
+    async fn test_redisor_expire() {
+        cfg::init(&"./fixtures/config.toml".to_string());
+        let redis_url = cfg::config().miner.redis_url.clone();
+        let deadpool = deadpool_redis::Config::from_url(redis_url);
+        let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
+        let redisor = Redisor { pool };
+        let mut redis = redisor.get_redis().await.unwrap();
+        redis.del("key6").await.unwrap();
+        redis.set_ex("key6", "value", 10).await.unwrap();
+        assert_eq!(redis.get("key6").await.unwrap(), Some("value".to_string()));
+        tokio::time::sleep(time::Duration::from_millis(10000)).await;
+        assert_eq!(redis.get("key6").await.unwrap(), None);
     }
 }

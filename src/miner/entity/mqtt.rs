@@ -1,4 +1,12 @@
+use std::sync::Arc;
+
 use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::{
+    library::{error::AppResult, Redis},
+    miner::bootstrap::AppState,
+    models::account_setting::BwAccountSetting,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
@@ -6,19 +14,6 @@ pub enum Message {
     MessageStatus(MessageStatus),
     MessageUpdate(Box<MessageUpdate>),
 }
-
-// impl Message {
-//     pub async fn save_into_redis(&self,app_state: Arc<AppState>) ->
-// AppResult<()> {         let mut redis = app_state.get_redis().await?;
-//         let
-//         let mut hasher = DefaultHasher::new();
-//         s.hash(&mut hasher);
-//         let hash = hasher.finish();
-//         let rkey = "mining:status:";
-//         redis.set().await?;
-//         Ok(())
-//     }
-// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MessageStatus {
@@ -51,6 +46,15 @@ pub struct MessageUpdate {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct MessageUpdateBasic {
+    pool: Vec<Pool>,
+    led: i32,
+    ip: String,
+    #[serde(rename = "coin", deserialize_with = "from_coin")]
+    coin: Option<Coin>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Pool {
     url: String,
     user: String,
@@ -63,10 +67,107 @@ struct Pool {
     pass: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Coin {
     algorithm: String,
     symbol: String,
+}
+
+impl From<&MessageUpdate> for MessageUpdateBasic {
+    fn from(value: &MessageUpdate) -> Self {
+        MessageUpdateBasic {
+            pool: value.pool.clone(),
+            led: value.led,
+            ip: value.ip.clone(),
+            coin: value.coin.clone(),
+        }
+    }
+}
+
+impl Message {
+    pub async fn store(
+        &self,
+        app_state: Arc<AppState>,
+        mac: &str,
+    ) -> AppResult<()> {
+        match self {
+            Message::MessageStatus(status) => {
+                status.store(&mut app_state.get_redis().await?, mac).await
+            }
+            Message::MessageUpdate(update) => {
+                update.store(mac, app_state).await
+            }
+        }
+    }
+}
+
+impl MessageStatus {
+    pub async fn store(&self, redis: &mut Redis, mac: &str) -> AppResult<()> {
+        let r_status_key = format!("miner_status:{}", mac);
+        let r_status_value = serde_json::to_string(self).map_err(|e| {
+            let format_err =
+                format!("Error occurred while serializing message: {}", e);
+            tracing::error!("{}", format_err);
+            anyhow::anyhow!(format_err)
+        })?;
+        redis
+            .set_hash(&r_status_key, "mode", &r_status_value)
+            .await?;
+        redis.expire(&r_status_key, 60).await?;
+        tracing::debug!("Updated miner status for MAC: {}", mac);
+        Ok(())
+    }
+}
+
+impl MessageUpdate {
+    pub async fn store(
+        &self,
+        mac: &str,
+        app_state: Arc<AppState>,
+    ) -> AppResult<()> {
+        let mut redis = app_state.get_redis().await?;
+        let r_status_key = format!("miner_status:{}", mac);
+        let r_status_value = serde_json::to_string(&self).map_err(|e| {
+            let format_err =
+                format!("Error occurred while serializing message: {}", e);
+            tracing::error!("{}", format_err);
+            anyhow::anyhow!(format_err)
+        })?;
+        redis
+            .set_hash(&r_status_key, "status", &r_status_value)
+            .await?;
+        redis.expire(&r_status_key, 60).await?;
+        tracing::debug!("Updated miner update for MAC: {}", mac);
+
+        let r_account_key = format!("account_key:{}", self.key);
+        let account_id = match redis.get(&r_account_key).await? {
+            Some(id) => id,
+            None => {
+                let account_id = BwAccountSetting::fetch_account_id_by_key(
+                    app_state.get_db(),
+                    &self.key,
+                )
+                .await?
+                .to_string();
+                redis.set(&r_account_key, &account_id).await?;
+                account_id
+            }
+        };
+        let r_user_key = format!("miner_user:{}", account_id);
+        let basic_value = MessageUpdateBasic::from(self);
+        let r_user_value =
+            serde_json::to_string(&basic_value).map_err(|e| {
+                let format_err =
+                    format!("Error occurred while serializing message: {}", e);
+                tracing::error!("{}", format_err);
+                anyhow::anyhow!(format_err)
+            })?;
+        redis.set_hash(&r_user_key, mac, &r_user_value).await?;
+        redis.expire(&r_user_key, 3600 * 24 * 30).await?;
+        tracing::debug!("Updated user key for account ID: {}", account_id);
+
+        Ok(())
+    }
 }
 
 fn from_coin<'de, D>(deserializer: D) -> Result<Option<Coin>, D::Error>
@@ -119,3 +220,88 @@ where
         &_ => None,
     })
 }
+
+// TODO: move into tests
+// #[cfg(test)]
+// mod tests {
+//     use tokio::test;
+//     use crate::library::cfg;
+
+// #[tokio::test]
+// async fn test_message_status_store() {
+//     cfg::init(&"./fixtures/config.toml".to_string());
+//     let app_state = Arc::new(AppState::init().await);
+//     let mut redis = app_state.get_redis().await.unwrap();
+//     redis.expect_set_hash()
+//         .with(eq("miner_status:mac_address"), eq("mode"), any())
+//         .times(1)
+//         .returning(|_, _, _| Ok(()));
+//     redis.expect_expire()
+//         .with(eq("miner_status:mac_address"), eq(60))
+//         .times(1)
+//         .returning(|_, _| Ok(()));
+//
+//     let app_state = Arc::new(MockAppState {
+//         redis: redis,
+//     });
+//
+//     let message_status = MessageStatus { mode: 1 };
+//     let result = message_status.store(&mut
+// app_state.get_redis().await.unwrap(), "mac_address").await;
+//
+//     assert!(result.is_ok());
+// }
+//
+// #[tokio::test]
+// async fn test_message_update_store() {
+//     cfg::init(&"./fixtures/config.toml".to_string());
+//     let app_state = Arc::new(AppState::init().await);
+//     let mut redis = app_state.get_redis().await.unwrap();
+//     redis.expect_set_hash()
+//         .with(eq("miner_status:mac_address"), eq("status"), any())
+//         .times(1)
+//         .returning(|_, _, _| Ok(()));
+//     redis.expect_expire()
+//         .with(eq("miner_status:mac_address"), eq(60))
+//         .times(1)
+//         .returning(|_, _| Ok(()));
+//     redis.expect_get()
+//         .with(eq("account_key:key"))
+//         .times(1)
+//         .returning(|_| Ok(Some("account_id".to_string())));
+//     redis.expect_set_hash()
+//         .with(eq("miner_user:account_id"), eq("mac_address"), any())
+//         .times(1)
+//         .returning(|_, _, _| Ok(()));
+//     redis.expect_expire()
+//         .with(eq("miner_user:account_id"), eq(3600 * 24 * 30))
+//         .times(1)
+//         .returning(|_, _| Ok(()));
+//
+//     let app_state = Arc::new(MockAppState {
+//         redis: redis,
+//     });
+//
+//     let message_update = Box::new(MessageUpdate {
+//         now_rate: 1.0,
+//         avg_rate: 1.0,
+//         history_rate: vec![1.0],
+//         power_mode: "mode".to_string(),
+//         dig_time: 1,
+//         pool: vec![],
+//         hard_err: 0.0,
+//         refuse: 0.0,
+//         temperature: "temp".to_string(),
+//         fan: "fan".to_string(),
+//         led: 1,
+//         ip: "127.0.0.1".to_string(),
+//         key: "key".to_string(),
+//         coin: None,
+//     });
+//
+//     let result = message_update.store("mac_address",
+// app_state.clone()).await;
+//
+//     assert!(result.is_ok());
+// }
+// }

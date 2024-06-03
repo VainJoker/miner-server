@@ -82,6 +82,7 @@ pub async fn login_user_handler(
                     user.account_id
                 );
             }
+            // TODO: generate  key
             return Ok(SuccessResponse {
                 msg: "Tokens generated successfully",
                 data: Some(Json(LoginResponse::new(tokens, user))),

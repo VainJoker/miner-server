@@ -6,14 +6,14 @@ pub mod exchange_rate;
 pub mod jwt_service;
 pub mod message_queue;
 pub mod miner_stat;
-pub mod mqtt;
+pub mod mqtt_service;
 
 #[derive(Clone)]
 pub struct Services {
     pub exchange_rate: exchange_rate::Server,
     pub miner_stat: miner_stat::Server,
     pub message_queue: message_queue::Server,
-    pub mqtt: mqtt::Server,
+    pub mqtt: mqtt_service::Server,
 }
 
 impl Services {
@@ -22,7 +22,7 @@ impl Services {
             exchange_rate: exchange_rate::Server::init(),
             miner_stat: miner_stat::Server::init(),
             message_queue: message_queue::Server::init(),
-            mqtt: mqtt::Server::init().await,
+            mqtt: mqtt_service::Server::init().await,
         }
     }
 
