@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use deadpool_redis::{Connection, Pool, Runtime};
 use redis::AsyncCommands;
 
@@ -61,7 +62,7 @@ impl Redis {
         Ok(())
     }
 
-    pub async fn get_hash_keys(
+    pub async fn hkeys(
         &mut self,
         key: &str,
     ) -> InnerResult<Option<Vec<String>>> {
@@ -73,7 +74,7 @@ impl Redis {
         Ok(result)
     }
 
-    pub async fn set_hash(
+    pub async fn hset(
         &mut self,
         key: &str,
         field: &str,
@@ -114,6 +115,36 @@ impl Redis {
             .map_err(RedisorError::ExeError)?;
         Ok(())
     }
+
+    pub async fn mget(&mut self, keys: &[&str]) -> InnerResult<Vec<Option<String>>> {
+        let result: Vec<Option<String>> = self
+            .connection
+            .mget(keys)
+            .await
+            .map_err(RedisorError::ExeError)?;
+        Ok(result)
+    }
+
+    pub async fn hgetalls(&mut self, keys: &[&str]) -> InnerResult<Vec<HashMap<String,String>>> {
+        let mut pipe = redis::pipe();
+        keys.into_iter().for_each(|key|{
+            pipe.hgetall(key);
+        });
+        let result = pipe
+            .query_async(&mut self.connection)
+            .await
+            .map_err(RedisorError::ExeError)?;
+        Ok(result)
+    }
+
+    pub async fn hgets(&mut self, key: &str, fields: &[&str]) -> InnerResult<Vec<Option<String>>> {
+        let result: Vec<Option<String>> = self
+            .connection
+            .hget(key, fields)
+            .await
+            .map_err(RedisorError::ExeError)?;
+        Ok(result)
+    }
 }
 
 #[cfg(test)]
@@ -131,9 +162,8 @@ mod tests {
         let redisor = Redisor { pool };
         let mut redis = redisor.get_redis().await.unwrap();
 
-        redis.set("key1", "value").await.unwrap();
-        assert_eq!(redis.get("key1").await.unwrap().unwrap(), "value");
-        redis.del("key1").await.unwrap();
+        redis.set("ping", "pong").await.unwrap();
+        assert_eq!(redis.get("ping").await.unwrap().unwrap(), "pong");
     }
 
     #[tokio::test]
@@ -166,10 +196,11 @@ mod tests {
         assert_eq!(redis.get("key3").await.unwrap(), Some("value".to_string()));
         tokio::time::sleep(time::Duration::from_millis(10000)).await;
         assert_eq!(redis.get("key3").await.unwrap(), None);
+        redis.del("key3").await.unwrap();
     }
 
     #[tokio::test]
-    async fn test_redisor_set_hash() {
+    async fn test_redisor_hset() {
         cfg::init(&"./fixtures/config.toml".to_string());
         let redis_url = cfg::config().miner.redis_url.clone();
         let deadpool = deadpool_redis::Config::from_url(redis_url);
@@ -177,11 +208,14 @@ mod tests {
         let redisor = Redisor { pool };
         let mut redis = redisor.get_redis().await.unwrap();
         redis.del("key4").await.unwrap();
-        redis.set_hash("key4", "field1", "value1").await.unwrap();
+        redis.hset("key4", "field1", "value1").await.unwrap();
+        redis.hset("key4", "field2", "value2").await.unwrap();
+        assert_eq!(redis.hkeys("key4").await.unwrap(), Some(vec!["field1".to_string(), "field2".to_string()]));
+        redis.del("key4").await.unwrap();
     }
 
     #[tokio::test]
-    async fn test_redisor_get_hash_keys() {
+    async fn test_redisor_hkeys() {
         cfg::init(&"./fixtures/config.toml".to_string());
         let redis_url = cfg::config().miner.redis_url.clone();
         let deadpool = deadpool_redis::Config::from_url(redis_url);
@@ -189,13 +223,14 @@ mod tests {
         let redisor = Redisor { pool };
         let mut redis = redisor.get_redis().await.unwrap();
         redis.del("key5").await.unwrap();
-        assert_eq!(redis.get_hash_keys("key5").await.unwrap(), Some(vec![]));
-        redis.set_hash("key5", "field1", "value1").await.unwrap();
-        redis.set_hash("key5", "field2", "value2").await.unwrap();
+        assert_eq!(redis.hkeys("key5").await.unwrap(), Some(vec![]));
+        redis.hset("key5", "field1", "value1").await.unwrap();
+        redis.hset("key5", "field2", "value2").await.unwrap();
         assert_eq!(
-            redis.get_hash_keys("key5").await.unwrap(),
+            redis.hkeys("key5").await.unwrap(),
             Some(vec!["field1".to_string(), "field2".to_string()])
         );
+        redis.del("key5").await.unwrap();
     }
 
     #[tokio::test]
@@ -211,5 +246,62 @@ mod tests {
         assert_eq!(redis.get("key6").await.unwrap(), Some("value".to_string()));
         tokio::time::sleep(time::Duration::from_millis(10000)).await;
         assert_eq!(redis.get("key6").await.unwrap(), None);
+        redis.del("key6").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_redisor_mget() {
+        cfg::init(&"./fixtures/config.toml".to_string());
+        let redis_url = cfg::config().miner.redis_url.clone();
+        let deadpool = deadpool_redis::Config::from_url(redis_url);
+        let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
+        let redisor = Redisor { pool };
+        let mut redis = redisor.get_redis().await.unwrap();
+        redis.set("key7", "value1").await.unwrap();
+        redis.set("key8", "value2").await.unwrap();
+        assert_eq!(redis.mget(&["key7","key8"].to_vec()).await.unwrap(), vec![Some("value1".to_string()), Some("value2".to_string())]);
+        redis.del("key7").await.unwrap();
+        redis.del("key8").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_redisor_hget() {
+        cfg::init(&"./fixtures/config.toml".to_string());
+        let redis_url = cfg::config().miner.redis_url.clone();
+        let deadpool = deadpool_redis::Config::from_url(redis_url);
+        let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
+        let redisor = Redisor { pool };
+        let mut redis = redisor.get_redis().await.unwrap();
+        redis.del("key9").await.unwrap();
+        redis.hset("key9", "field1", "value1").await.unwrap();
+        redis.hset("key9", "field2", "value2").await.unwrap();
+        assert_eq!(redis.hgets("key9", &["field1","field2"]).await.unwrap(), vec![Some("value1".to_string()), Some("value2".to_string())]);
+        redis.del("key9").await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_redisor_hgetalls() {
+        cfg::init(&"./fixtures/config.toml".to_string());
+        let redis_url = cfg::config().miner.redis_url.clone();
+        let deadpool = deadpool_redis::Config::from_url(redis_url);
+        let pool = deadpool.create_pool(Some(Runtime::Tokio1)).unwrap();
+        let redisor = Redisor { pool };
+        let mut redis = redisor.get_redis().await.unwrap();
+        redis.del("key10").await.unwrap();
+        redis.hset("key10", "field1", "value1").await.unwrap();
+        redis.hset("key10", "field2", "value2").await.unwrap();
+        redis.del("key11").await.unwrap();
+        redis.hset("key11", "field1", "value1").await.unwrap();
+        redis.hset("key11", "field2", "value2").await.unwrap();
+        eprintln!("{:#?}",redis.hgetalls(&["key10","key11","key12"]).await.unwrap());
+        let mut hm1 = HashMap::new();
+        hm1.insert("field1".to_string(), "value1".to_string());
+        hm1.insert("field2".to_string(), "value2".to_string());
+        let mut hm2 = HashMap::new();
+        hm2.insert("field1".to_string(), "value1".to_string());
+        hm2.insert("field2".to_string(), "value2".to_string());
+        assert_eq!(redis.hgetalls(&["key10","key11"]).await.unwrap(), vec![hm1, hm2]);
+        redis.del("key10").await.unwrap();
+        redis.del("key11").await.unwrap();
     }
 }

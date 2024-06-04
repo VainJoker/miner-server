@@ -111,9 +111,9 @@ impl MessageStatus {
             anyhow::anyhow!(format_err)
         })?;
         redis
-            .set_hash(&r_status_key, "mode", &r_status_value)
+            .hset(&r_status_key, "mode", &r_status_value)
             .await?;
-        redis.expire(&r_status_key, 60).await?;
+        redis.expire(&r_status_key, 60 * 60).await?;
         tracing::debug!("Updated miner status for MAC: {}", mac);
         Ok(())
     }
@@ -134,7 +134,7 @@ impl MessageUpdate {
             anyhow::anyhow!(format_err)
         })?;
         redis
-            .set_hash(&r_status_key, "status", &r_status_value)
+            .hset(&r_status_key, "status", &r_status_value)
             .await?;
         redis.expire(&r_status_key, 60).await?;
         tracing::debug!("Updated miner update for MAC: {}", mac);
@@ -162,7 +162,7 @@ impl MessageUpdate {
                 tracing::error!("{}", format_err);
                 anyhow::anyhow!(format_err)
             })?;
-        redis.set_hash(&r_user_key, mac, &r_user_value).await?;
+        redis.hset(&r_user_key, mac, &r_user_value).await?;
         redis.expire(&r_user_key, 3600 * 24 * 30).await?;
         tracing::debug!("Updated user key for account ID: {}", account_id);
 
