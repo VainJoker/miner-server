@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use deadpool_redis::{Connection, Pool, Runtime};
 use redis::AsyncCommands;
 
@@ -116,7 +117,10 @@ impl Redis {
         Ok(())
     }
 
-    pub async fn mget(&mut self, keys: &[&str]) -> InnerResult<Vec<Option<String>>> {
+    pub async fn mget(
+        &mut self,
+        keys: &[&str],
+    ) -> InnerResult<Vec<Option<String>>> {
         let result: Vec<Option<String>> = self
             .connection
             .mget(keys)
@@ -125,9 +129,12 @@ impl Redis {
         Ok(result)
     }
 
-    pub async fn hgetalls(&mut self, keys: &[&str]) -> InnerResult<Vec<HashMap<String,String>>> {
+    pub async fn hgetalls(
+        &mut self,
+        keys: &[&str],
+    ) -> InnerResult<Vec<HashMap<String, String>>> {
         let mut pipe = redis::pipe();
-        keys.into_iter().for_each(|key|{
+        keys.into_iter().for_each(|key| {
             pipe.hgetall(key);
         });
         let result = pipe
@@ -137,7 +144,11 @@ impl Redis {
         Ok(result)
     }
 
-    pub async fn hgets(&mut self, key: &str, fields: &[&str]) -> InnerResult<Vec<Option<String>>> {
+    pub async fn hgets(
+        &mut self,
+        key: &str,
+        fields: &[&str],
+    ) -> InnerResult<Vec<Option<String>>> {
         let result: Vec<Option<String>> = self
             .connection
             .hget(key, fields)
@@ -210,7 +221,10 @@ mod tests {
         redis.del("key4").await.unwrap();
         redis.hset("key4", "field1", "value1").await.unwrap();
         redis.hset("key4", "field2", "value2").await.unwrap();
-        assert_eq!(redis.hkeys("key4").await.unwrap(), Some(vec!["field1".to_string(), "field2".to_string()]));
+        assert_eq!(
+            redis.hkeys("key4").await.unwrap(),
+            Some(vec!["field1".to_string(), "field2".to_string()])
+        );
         redis.del("key4").await.unwrap();
     }
 
@@ -259,7 +273,10 @@ mod tests {
         let mut redis = redisor.get_redis().await.unwrap();
         redis.set("key7", "value1").await.unwrap();
         redis.set("key8", "value2").await.unwrap();
-        assert_eq!(redis.mget(&["key7","key8"].to_vec()).await.unwrap(), vec![Some("value1".to_string()), Some("value2".to_string())]);
+        assert_eq!(
+            redis.mget(&["key7", "key8"].to_vec()).await.unwrap(),
+            vec![Some("value1".to_string()), Some("value2".to_string())]
+        );
         redis.del("key7").await.unwrap();
         redis.del("key8").await.unwrap();
     }
@@ -275,7 +292,10 @@ mod tests {
         redis.del("key9").await.unwrap();
         redis.hset("key9", "field1", "value1").await.unwrap();
         redis.hset("key9", "field2", "value2").await.unwrap();
-        assert_eq!(redis.hgets("key9", &["field1","field2"]).await.unwrap(), vec![Some("value1".to_string()), Some("value2".to_string())]);
+        assert_eq!(
+            redis.hgets("key9", &["field1", "field2"]).await.unwrap(),
+            vec![Some("value1".to_string()), Some("value2".to_string())]
+        );
         redis.del("key9").await.unwrap();
     }
 
@@ -293,14 +313,20 @@ mod tests {
         redis.del("key11").await.unwrap();
         redis.hset("key11", "field1", "value1").await.unwrap();
         redis.hset("key11", "field2", "value2").await.unwrap();
-        eprintln!("{:#?}",redis.hgetalls(&["key10","key11","key12"]).await.unwrap());
+        eprintln!(
+            "{:#?}",
+            redis.hgetalls(&["key10", "key11", "key12"]).await.unwrap()
+        );
         let mut hm1 = HashMap::new();
         hm1.insert("field1".to_string(), "value1".to_string());
         hm1.insert("field2".to_string(), "value2".to_string());
         let mut hm2 = HashMap::new();
         hm2.insert("field1".to_string(), "value1".to_string());
         hm2.insert("field2".to_string(), "value2".to_string());
-        assert_eq!(redis.hgetalls(&["key10","key11"]).await.unwrap(), vec![hm1, hm2]);
+        assert_eq!(
+            redis.hgetalls(&["key10", "key11"]).await.unwrap(),
+            vec![hm1, hm2]
+        );
         redis.del("key10").await.unwrap();
         redis.del("key11").await.unwrap();
     }

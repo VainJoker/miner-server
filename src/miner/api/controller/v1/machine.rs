@@ -48,7 +48,8 @@
 //         r_status_keys[*i].to_owned()
 //     }).collect();
 //
-//     let r_user_values = redis.hmget(r_user_key, &none_machine_hash_keys).await?;
+//     let r_user_values = redis.hmget(r_user_key,
+// &none_machine_hash_keys).await?;
 //
 //     let mut machines = Vec::new();
 //

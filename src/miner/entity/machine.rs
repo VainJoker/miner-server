@@ -2,13 +2,15 @@ use std::sync::Arc;
 
 use serde_derive::{Deserialize, Serialize};
 use sqlx::types::Json;
-use crate::library::error::AppResult;
-use crate::library::Redis;
-use crate::miner::bootstrap::AppState;
-use crate::models::machine::{BwMachine, Setting};
+
+use crate::{
+    library::error::AppResult,
+    miner::bootstrap::AppState,
+    models::machine::{BwMachine, Setting},
+};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ReadMachineResponse{
+pub struct ReadMachineResponse {
     mac: String,
     account_id: i64,
 
@@ -42,7 +44,6 @@ pub struct ReadMachineResponse{
 
     hardware_version: String,
     software_version: String,
-
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -64,45 +65,46 @@ struct Coin {
 
 pub async fn get_machines(
     app_state: Arc<AppState>,
-    account_id: i64
-) -> AppResult<()>{
+    account_id: i64,
+) -> AppResult<()> {
     let mut redis = app_state.get_redis().await?;
-    let r_user_key = &format!("miner_user:{}",  account_id);
+    let r_user_key = &format!("miner_user:{}", account_id);
 
     let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
     eprintln!("{:#?}", r_user_fields);
 
     let r_status_keys: Vec<_> = r_user_fields
         .iter()
-        .map(|k|{
-                format!("miner_status:{}", k)
-        }).collect();
-    let r_status_keys:Vec<_> = r_status_keys.iter().map(|s| s.as_str()).collect();
+        .map(|k| format!("miner_status:{}", k))
+        .collect();
+    let r_status_keys: Vec<_> =
+        r_status_keys.iter().map(|s| s.as_str()).collect();
     eprintln!("{:#?}", r_status_keys);
 
     let r_status_value = redis.hgetalls(&r_status_keys).await?;
     eprintln!("{:#?}", r_status_value);
-    let none_indices: Vec<_> = r_status_value.iter().enumerate()
-        .filter_map(|(i, item)| {
-            if item.is_empty() {
-                Some(i)
-            } else {
-                None
-            }
-        })
+    let none_indices: Vec<_> = r_status_value
+        .iter()
+        .enumerate()
+        .filter_map(|(i, item)| if item.is_empty() { Some(i) } else { None })
         .collect();
 
     eprintln!("{:#?}", none_indices);
-    let none_machine_hash_keys: Vec<_> = none_indices.into_iter().map(|i| &r_user_fields[i]).collect();
-    let none_machine_hash_keys:Vec<_> = none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
-    eprintln!("{:#?}",none_machine_hash_keys);
-    let r_user_values = redis.hgets(r_user_key, &none_machine_hash_keys).await?;
-    eprintln!("{:#?}",r_user_values);
+    let none_machine_hash_keys: Vec<_> = none_indices
+        .into_iter()
+        .map(|i| &r_user_fields[i])
+        .collect();
+    let none_machine_hash_keys: Vec<_> =
+        none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
+    eprintln!("{:#?}", none_machine_hash_keys);
+    let r_user_values =
+        redis.hgets(r_user_key, &none_machine_hash_keys).await?;
+    eprintln!("{:#?}", r_user_values);
 
-    let _machines = BwMachine::fetch_machines_by_account_id(app_state.get_db(), account_id)
-        .await
-        .expect("Failed to fetch machines");
-
+    let _machines =
+        BwMachine::fetch_machines_by_account_id(app_state.get_db(), account_id)
+            .await
+            .expect("Failed to fetch machines");
 
     // TODO: 将所有的jsonstring 转成对应的结构体,
     // 将所有的Vec 转成 HashMap 以 MAC 作为 key
@@ -125,9 +127,9 @@ pub async fn get_machines(
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
+
     use super::*;
-    use crate::library::cfg;
-    use crate::miner::bootstrap::AppState;
+    use crate::{library::cfg, miner::bootstrap::AppState};
 
     const ACCOUNT_ID: i64 = 6192889942050345985;
 
@@ -139,9 +141,9 @@ mod tests {
         cfg::init(&"./fixtures/config.toml".to_string());
         let app_state = Arc::new(AppState::init().await);
 
-        let mut redis = app_state.get_redis().await.unwrap();
+        // let mut redis = app_state.get_redis().await.unwrap();
 
-        let res = get_machines(&mut redis, ACCOUNT_ID).await;
+        let res = get_machines(app_state, ACCOUNT_ID).await;
 
         // eprintln!("{:#?}", res);
     }

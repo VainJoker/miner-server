@@ -205,13 +205,24 @@ impl BwMachine {
         Ok(map.execute(db).await?.rows_affected())
     }
 
-    pub async fn fetch_machine_by_mac(
+    // TODO:
+    pub async fn fetch_machine_by_mac_and_account_id(
         db: &DB,
         item: &ReadBwMachineSchema<'_>,
     ) -> InnerResult<Self> {
-        let sql = "SELECT * FROM bw_machine WHERE mac = MACADDR($1) AND account_id = $2";
+        let sql = "SELECT * FROM bw_machine WHERE mac = MACADDR($1) AND account_id = $2 AND deleted_at = nil";
         let map = sqlx::query_as(sql).bind(item.mac).bind(item.account_id);
         Ok(map.fetch_one(db).await?)
+    }
+
+    // TODO:
+    pub async fn fetch_machines_by_account_id(
+        db: &DB,
+        account_id: i64,
+    ) -> InnerResult<Vec<Self>> {
+        let sql = "SELECT * FROM bw_machine WHERE account_id = $2 AND deleted_at = nil";
+        let map = sqlx::query_as(sql).bind(account_id);
+        Ok(map.fetch_all(db).await?)
     }
 }
 
