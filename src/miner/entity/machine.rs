@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use serde_derive::{Deserialize, Serialize};
 use sqlx::types::Json;
 use crate::library::error::AppResult;
 use crate::library::Redis;
-use crate::models::machine::Setting;
+use crate::miner::bootstrap::AppState;
+use crate::models::machine::{BwMachine, Setting};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ReadMachineResponse{
@@ -60,9 +63,10 @@ struct Coin {
 }
 
 pub async fn get_machines(
-   redis: &mut Redis,
-   account_id: i64
+    app_state: Arc<AppState>,
+    account_id: i64
 ) -> AppResult<()>{
+    let mut redis = app_state.get_redis().await?;
     let r_user_key = &format!("miner_user:{}",  account_id);
 
     let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
@@ -79,7 +83,7 @@ pub async fn get_machines(
     let r_status_value = redis.hgetalls(&r_status_keys).await?;
     eprintln!("{:#?}", r_status_value);
     let none_indices: Vec<_> = r_status_value.iter().enumerate()
-        .filter_map(|(i, &ref item)| {
+        .filter_map(|(i, item)| {
             if item.is_empty() {
                 Some(i)
             } else {
@@ -94,6 +98,17 @@ pub async fn get_machines(
     eprintln!("{:#?}",none_machine_hash_keys);
     let r_user_values = redis.hgets(r_user_key, &none_machine_hash_keys).await?;
     eprintln!("{:#?}",r_user_values);
+
+    let _machines = BwMachine::fetch_machines_by_account_id(app_state.get_db(), account_id)
+        .await
+        .expect("Failed to fetch machines");
+
+
+    // TODO: 将所有的jsonstring 转成对应的结构体,
+    // 将所有的Vec 转成 HashMap 以 MAC 作为 key
+    // 将所有的结构体合并成一个完整的结构体
+    // 将结构体合成一个Vec并返回
+
     // let mut machines = Vec::new();
 
     // let online_machines = serde_json::from_str(r_status_value)?;
