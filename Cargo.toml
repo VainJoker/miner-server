@@ -30,6 +30,7 @@ bytes = "1"
 prost = "0.12"
 prost-helper = "0.8"
 prost-types = "0.12"
+tonic = {"version" = "0.11.0",features = ["codegen","prost"]}
 log = "0.4"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json","fmt","env-filter","std","registry"] }
@@ -50,6 +51,8 @@ regex-lite = "0.1.5"
 
 [build-dependencies]
 prost-serde = "0.3"
+tonic-build = { version = "0.11", features = ["prost"] }
+
 
 [dev-dependencies]
 assert-json-diff = "2.0"

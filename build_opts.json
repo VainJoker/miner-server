@@ -3,7 +3,8 @@
         "./protobuf"
     ],
     "files": [
-        "./protobuf/rpc_error.proto"
+        "./protobuf/rpc_error.proto",
+        "./protobuf/miner_sign.proto"
     ],
     "output": "src/abi/pb",
     "opts": [
@@ -12,7 +13,9 @@
             "description": "serde support for message",
             "attr": "#[derive(serde::Serialize, serde::Deserialize)]\n#[serde(default)]",
             "paths": [
-                "RpcError"
+                "RpcError",
+                "SignMessageRequest",
+                "SignMessageResponse"
             ]
         },
         {

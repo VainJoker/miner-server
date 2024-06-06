@@ -1,11 +1,16 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde_derive::{Deserialize, Serialize};
 use sqlx::types::Json;
 
 use crate::{
     library::error::AppResult,
-    miner::bootstrap::AppState,
+    miner::{
+        bootstrap::AppState,
+        entity::mqtt::{
+            Coin, MessageStatus, MessageUpdate, MessageUpdateBasic, Pool,
+        },
+    },
     models::machine::{BwMachine, Setting},
 };
 
@@ -15,17 +20,17 @@ pub struct ReadMachineResponse {
     account_id: i64,
 
     mode: usize,
-    now_rate: f64,
-    avg_rate: f64,
-    history_rate: Vec<f64>,
-    power_mode: String,
-    dig_time: i32,
+    now_rate: Option<f64>,
+    avg_rate: Option<f64>,
+    history_rate: Option<Vec<f64>>,
+    power_mode: Option<String>,
+    dig_time: Option<i32>,
     pool: Vec<Pool>,
-    hard_err: f64,
-    refuse: f64,
-    temperature: String,
-    fan: String,
-    led: i32,
+    hard_err: Option<f64>,
+    refuse: Option<f64>,
+    temperature: Option<String>,
+    fan: Option<String>,
+    led: Option<i32>,
 
     coin: Option<Coin>,
     device_type: String,
@@ -46,21 +51,77 @@ pub struct ReadMachineResponse {
     software_version: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Pool {
-    url: String,
-    user: String,
-    legal: bool,
-    active: bool,
-    drag_id: i32,
-    pool_priority: i32,
-    pass: String,
-}
+impl ReadMachineResponse {
+    pub fn from_online(
+        config: &BwMachine,
+        status: MessageUpdate,
+        mode: MessageStatus,
+    ) -> Self {
+        Self {
+            mac: config.mac.clone(),
+            account_id: config.account_id,
+            mode: mode.mode,
+            now_rate: Some(status.now_rate),
+            avg_rate: Some(status.avg_rate),
+            history_rate: Some(status.history_rate),
+            power_mode: Some(status.power_mode),
+            dig_time: Some(status.dig_time),
+            pool: status.pool,
+            hard_err: Some(status.hard_err),
+            refuse: Some(status.refuse),
+            temperature: Some(status.temperature),
+            fan: Some(status.fan),
+            led: Some(status.led),
+            coin: status.coin,
+            device_type: config.device_type.clone(),
+            device_name: config.device_name.clone(),
+            device_ip: status.ip,
+            group_id: config.group_id,
+            group_name: Some("".to_string()),
+            policy_id: config.policy_id,
+            policy_name: Some("".to_string()),
+            pool_id: config.pool_id,
+            pool_name: Some("".to_string()),
+            setting: config.setting.clone(),
+            hardware_version: config.hardware_version.clone(),
+            software_version: config.software_version.clone(),
+        }
+    }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Coin {
-    algorithm: String,
-    symbol: String,
+    pub fn from_offline(
+        config: &BwMachine,
+        status: MessageUpdateBasic,
+    ) -> Self {
+        Self {
+            mac: config.mac.clone(),
+            account_id: config.account_id,
+            mode: 0,
+            now_rate: None,
+            avg_rate: None,
+            history_rate: None,
+            power_mode: None,
+            dig_time: None,
+            pool: status.pool,
+            hard_err: None,
+            refuse: None,
+            temperature: None,
+            fan: None,
+            led: None,
+            coin: status.coin,
+            device_type: config.device_type.clone(),
+            device_name: config.device_name.clone(),
+            device_ip: status.ip,
+            group_id: config.group_id,
+            group_name: Some("".to_string()),
+            policy_id: config.policy_id,
+            policy_name: Some("".to_string()),
+            pool_id: config.pool_id,
+            pool_name: Some("".to_string()),
+            setting: config.setting.clone(),
+            hardware_version: config.hardware_version.clone(),
+            software_version: config.software_version.clone(),
+        }
+    }
 }
 
 pub async fn get_machines(
@@ -71,7 +132,6 @@ pub async fn get_machines(
     let r_user_key = &format!("miner_user:{}", account_id);
 
     let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
-    eprintln!("{:#?}", r_user_fields);
 
     let r_status_keys: Vec<_> = r_user_fields
         .iter()
@@ -79,47 +139,85 @@ pub async fn get_machines(
         .collect();
     let r_status_keys: Vec<_> =
         r_status_keys.iter().map(|s| s.as_str()).collect();
-    eprintln!("{:#?}", r_status_keys);
 
     let r_status_value = redis.hgetalls(&r_status_keys).await?;
-    eprintln!("{:#?}", r_status_value);
-    let none_indices: Vec<_> = r_status_value
-        .iter()
-        .enumerate()
-        .filter_map(|(i, item)| if item.is_empty() { Some(i) } else { None })
-        .collect();
+    eprintln!("000{:#?}", r_status_value);
+    let mut online_map: HashMap<String, (MessageUpdate, MessageStatus)> =
+        HashMap::new();
+    let mut none_indices = Vec::new();
+    for (i, v) in r_status_value.iter().enumerate() {
+        if v.is_empty() {
+            none_indices.push(i);
+            continue;
+        }
+        let status_str = v.get("status").unwrap();
+        let mode_str = v.get("mode").unwrap();
+        eprintln!("111:{:#?}", status_str);
+        eprintln!("222:{:#?}", mode_str);
+        let online_status: MessageUpdate =
+            serde_json::from_str(status_str).unwrap();
+        let online_mode: MessageStatus =
+            serde_json::from_str(mode_str).unwrap();
+        online_map.insert(
+            r_user_fields.get(i).unwrap().clone().to_lowercase(),
+            (online_status, online_mode),
+        );
+    }
+    eprintln!("333{:#?}", online_map);
+    eprintln!("444{:#?}", none_indices);
 
-    eprintln!("{:#?}", none_indices);
-    let none_machine_hash_keys: Vec<_> = none_indices
-        .into_iter()
-        .map(|i| &r_user_fields[i])
-        .collect();
-    let none_machine_hash_keys: Vec<_> =
-        none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
-    eprintln!("{:#?}", none_machine_hash_keys);
-    let r_user_values =
-        redis.hgets(r_user_key, &none_machine_hash_keys).await?;
-    eprintln!("{:#?}", r_user_values);
+    let mut offline_map: HashMap<String, MessageUpdateBasic> = HashMap::new();
+    if !none_indices.is_empty() {
+        let none_machine_hash_keys: Vec<_> = none_indices
+            .into_iter()
+            .map(|i| &r_user_fields[i])
+            .collect();
+        let none_machine_hash_keys: Vec<_> =
+            none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
+        eprintln!("555{:#?}", none_machine_hash_keys);
+        let r_user_values =
+            redis.hgets(r_user_key, &none_machine_hash_keys).await?;
+        eprintln!("666{:#?}", r_user_values);
 
-    let _machines =
+        for (i, v) in r_user_values.iter().enumerate() {
+            let status_str = v.clone().unwrap();
+            let offline_status: MessageUpdateBasic =
+                serde_json::from_str(&status_str).unwrap();
+            offline_map.insert(
+                r_user_fields.get(i).unwrap().clone().to_lowercase(),
+                offline_status,
+            );
+        }
+    }
+
+    let bw_machines =
         BwMachine::fetch_machines_by_account_id(app_state.get_db(), account_id)
             .await
             .expect("Failed to fetch machines");
+    let mut db_hash: HashMap<String, BwMachine> = HashMap::new();
+    for bw_machine in bw_machines {
+        db_hash.insert(bw_machine.mac.clone().to_lowercase(), bw_machine);
+    }
 
-    // TODO: 将所有的jsonstring 转成对应的结构体,
-    // 将所有的Vec 转成 HashMap 以 MAC 作为 key
-    // 将所有的结构体合并成一个完整的结构体
-    // 将结构体合成一个Vec并返回
+    eprintln!("888{:#?}", db_hash);
 
-    // let mut machines = Vec::new();
+    let mut machines = Vec::new();
+    for (mac, (status, mode)) in online_map {
+        let config = db_hash.get(&mac).unwrap();
 
-    // let online_machines = serde_json::from_str(r_status_value)?;
-    //
-    // machines.extend(r_status_value);
-    // machines.extend(r_user_values);
-    // machines.retain(|m| m.is_some());
-    //
-    // eprintln!("{:#?}", machines);
+        let machine = ReadMachineResponse::from_online(config, status, mode);
+        eprintln!("{:#?}", machine);
+        machines.push(machine);
+    }
+
+    for (mac, status) in offline_map {
+        let config = db_hash.get(&mac).unwrap();
+        let machine = ReadMachineResponse::from_offline(config, status);
+        eprintln!("{:#?}", machine);
+        machines.push(machine);
+    }
+
+    eprintln!("999{:#?}", machines);
 
     Ok(())
 }

@@ -65,7 +65,7 @@ pub struct MachineStatus {
     pub device_status: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct CreateBwMachineSchema<'a> {
     pub mac: &'a str,
     pub account_id: i64,
@@ -80,36 +80,36 @@ pub struct CreateBwMachineSchema<'a> {
     pub software_version: &'a str,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct UpdateGroupSchema<'a> {
     pub mac: &'a str,
     pub account_id: i64,
     pub group_id: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct UpdatePolicySchema<'a> {
     pub mac: &'a str,
     pub account_id: i64,
     pub policy_id: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct UpdatePoolSchema<'a> {
     pub mac: &'a str,
     pub account_id: i64,
     pub pool_id: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct DeleteBwMachineSchema<'a> {
     pub mac: &'a str,
     pub account_id: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct ReadBwMachineSchema<'a> {
-    pub mac: &'a str,
+    pub macs: Vec<&'a str>,
     pub account_id: i64,
 }
 
@@ -147,7 +147,8 @@ impl BwMachine {
             UPDATE bw_machine
             SET group_id = $1
             WHERE mac = MACADDR($2) AND account_id = $3
-            RETURNING mac::VARCHAR, account_id, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
+            RETURNING mac::VARCHAR, account_id, device_type, device_name, device_ip::VARCHAR,
+            group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
             "#;
 
         let map = sqlx::query_as(sql)
@@ -205,22 +206,14 @@ impl BwMachine {
         Ok(map.execute(db).await?.rows_affected())
     }
 
-    // TODO:
-    pub async fn fetch_machine_by_mac_and_account_id(
-        db: &DB,
-        item: &ReadBwMachineSchema<'_>,
-    ) -> InnerResult<Self> {
-        let sql = "SELECT * FROM bw_machine WHERE mac = MACADDR($1) AND account_id = $2 AND deleted_at = nil";
-        let map = sqlx::query_as(sql).bind(item.mac).bind(item.account_id);
-        Ok(map.fetch_one(db).await?)
-    }
-
-    // TODO:
     pub async fn fetch_machines_by_account_id(
         db: &DB,
         account_id: i64,
     ) -> InnerResult<Vec<Self>> {
-        let sql = "SELECT * FROM bw_machine WHERE account_id = $2 AND deleted_at = nil";
+        let sql = r#"select mac::VARCHAR,account_id,device_type,device_name,device_ip::VARCHAR,
+        group_id,policy_id,pool_id,setting,hardware_version,software_version,
+        created_at,updated_at,deleted_at from bw_machine
+        WHERE account_id = $1 AND deleted_at IS NULL"#;
         let map = sqlx::query_as(sql).bind(account_id);
         Ok(map.fetch_all(db).await?)
     }
@@ -232,7 +225,8 @@ mod tests {
 
     use super::*;
     const ACCOUNT_ID: i64 = 6192889942050345985;
-    const MAC: &str = "08:00:2B:01:02:03";
+    const MAC1: &str = "08:00:2B:01:02:03";
+    const MAC2: &str = "08:00:2B:01:02:04";
     const GROUP_ID: i64 = 6193003777960711169;
     const POLICY_ID: i64 = 6194821006046008321;
     const POOL_ID: i64 = 6194824969470350666;
@@ -265,7 +259,7 @@ mod tests {
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_update_group_id(pool: PgPool) {
         let item = UpdateGroupSchema {
-            mac: MAC,
+            mac: MAC1,
             account_id: ACCOUNT_ID,
             group_id: GROUP_ID,
         };
@@ -276,7 +270,7 @@ mod tests {
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_update_policy_id(pool: PgPool) {
         let item = UpdatePolicySchema {
-            mac: MAC,
+            mac: MAC1,
             account_id: ACCOUNT_ID,
             policy_id: POLICY_ID,
         };
@@ -287,7 +281,7 @@ mod tests {
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_update_pool_id(pool: PgPool) {
         let item = UpdatePoolSchema {
-            mac: MAC,
+            mac: MAC1,
             account_id: ACCOUNT_ID,
             pool_id: POOL_ID,
         };
@@ -298,7 +292,7 @@ mod tests {
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_delete_bw_machine(pool: PgPool) {
         let item = DeleteBwMachineSchema {
-            mac: MAC,
+            mac: MAC1,
             account_id: ACCOUNT_ID,
         };
         let res = BwMachine::delete_bw_machine(&pool, &item).await.unwrap();
@@ -308,10 +302,18 @@ mod tests {
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_fetch_bw_machine_by_mac(pool: PgPool) {
         let item = DeleteBwMachineSchema {
-            mac: MAC,
+            mac: MAC1,
             account_id: ACCOUNT_ID,
         };
         let res = BwMachine::delete_bw_machine(&pool, &item).await.unwrap();
         assert_eq!(res, 1);
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
+    async fn test_fetch_machine_by_account_id(pool: PgPool) {
+        let res = BwMachine::fetch_machines_by_account_id(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
+        assert_eq!(res.len(), 2);
     }
 }

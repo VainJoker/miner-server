@@ -1,7 +1,9 @@
 [miner]
 env = "dev"
-host = "0.0.0.0"
-port = 8080
+api_host = "0.0.0.0"
+api_port = 8080
+grpc_host = "0.0.0.0"
+grpc_port = 8081
 db_url = "postgres://VJ:123qwe@localhost/miner"
 redis_url = "redis://localhost"
 mq_url = "amqp://VJ:123qwe@localhost:5672"

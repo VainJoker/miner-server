@@ -1,0 +1,40 @@
+syntax = "proto3";
+package miner_sign;
+
+message SignRequest{
+
+    message Capability {
+        repeated string powermode = 1;
+        repeated string algoset = 2;
+        uint32 poolmax = 3;
+        uint32 reboot = 4;
+        uint32 update = 5;
+        uint32 reset = 6;
+        uint32 led = 7;
+    }
+
+    string mac = 1;
+    string ip = 2;
+    string devtype = 3;
+    string key = 4;
+    uint32 t = 5;
+    string c = 6;
+    string hv = 7;
+    string sv = 8;
+    Capability capability = 9;
+    repeated uint32 candy = 10;
+}
+
+message SignResponse{
+  int32 result = 1;
+  string ms = 2;
+  int32 mpt = 3;
+  string mu = 4;
+  string mp = 5;
+  int64 t = 6;
+}
+
+
+service MinerSign {
+  rpc Sign(SignRequest) returns (SignResponse) {}
+}

@@ -53,6 +53,12 @@ description = "Check code for errors and warnings"
 command = "cargo"
 args = ["check"]
 
+[tasks.protos]
+description = "Rebuild protos"
+env = { "BUILD_PROTO" = "1" }
+command = "cargo"
+args = ["build"]
+
 [tasks.build]
 description = "Compile the project"
 command = "cargo"
@@ -100,3 +106,5 @@ description = "Generate changelog"
 install_crate = { crate_name = "git-cliff", binary = "git-cliff", test_arg = "--help" }
 command = "git"
 args = ["cliff", "-o", "CHANGELOG.md"]
+
+

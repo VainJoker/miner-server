@@ -87,8 +87,10 @@ pub struct TopicConfig {
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct MinerConfig {
     pub env: String,
-    pub host: String,
-    pub port: usize,
+    pub api_host: String,
+    pub api_port: usize,
+    pub grpc_host: String,
+    pub grpc_port: usize,
     pub db_url: String,
     pub redis_url: String,
     pub mq_url: String,
