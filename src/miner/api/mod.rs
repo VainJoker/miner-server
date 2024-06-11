@@ -1,30 +1,27 @@
 use std::sync::Arc;
+
 use tokio::net::TcpListener;
-use crate::library::cfg;
-use crate::library::error::AppResult;
-use crate::miner::bootstrap::{AppState, shutdown_signal};
+
+use crate::{
+    library::{cfg, error::AppResult},
+    miner::bootstrap::{shutdown_signal, AppState},
+};
 
 pub mod controller;
 pub mod middleware;
 pub mod route;
 
-
-pub struct Server{
+pub struct Server {
     pub host: String,
     pub port: String,
-
 }
 
 impl Server {
     pub fn init(host: String, port: String) -> Self {
-        Self {
-            host,
-            port
-        }
+        Self { host, port }
     }
 
-    pub async fn serve(&self,miner_state: Arc<AppState>) {
-
+    pub async fn serve(&self, miner_state: Arc<AppState>) {
         // let miner_state = Arc::new(AppState::init().await);
         // Create a regular axum app.
         let app = route::init(miner_state.clone());
@@ -38,7 +35,7 @@ impl Server {
                 });
 
         tracing::info!(
-        "✨ listening on {}",
+            "✨ listening on {}",
             listener.local_addr().unwrap_or_else(|e| panic!(
                 "💥 Failed to connect bind TcpListener: {e:?}"
             ))

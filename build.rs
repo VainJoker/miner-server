@@ -15,6 +15,7 @@ fn main() {
         .out_dir("src/pb") // 设置生成代码的自定义目录
         .compile(
             &["miner_sign.proto"], // 指定.proto文件的位置
-            &["./protobuf"], // 指定.proto文件的搜索目录
-        ).unwrap();
+            &["./protobuf"],       // 指定.proto文件的搜索目录
+        )
+        .unwrap();
 }
