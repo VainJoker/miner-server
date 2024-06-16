@@ -93,6 +93,7 @@ pub struct MinerConfig {
     pub grpc_port: usize,
     pub db_url: String,
     pub redis_url: String,
+    pub redis_prefix: String,
     pub mq_url: String,
     pub access_token: JWTConfig,
     pub refresh_token: JWTConfig,

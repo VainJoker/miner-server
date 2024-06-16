@@ -6,6 +6,7 @@ grpc_host = "0.0.0.0"
 grpc_port = 9090
 db_url = "postgres://VJ:123qwe@localhost/miner"
 redis_url = "redis://localhost"
+redis_prefix = "miner:"
 mq_url = "amqp://VJ:123qwe@localhost:5672"
 coins = ["BTC", "ETH", "XRP", "LTC", "DASH", "USDT", "USDC", "XMR", "DOGE"]
 

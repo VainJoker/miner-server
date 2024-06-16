@@ -121,7 +121,7 @@ pub async fn send_active_account_email_handler(
 ) -> AppResult<impl IntoResponse> {
     let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
-    if redis.get(&key).await?.is_some() {
+    if redis.get::<String>(&key).await?.is_some() {
         return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
     if claims.status != AccountStatus::Inactive {
@@ -159,7 +159,7 @@ pub async fn send_reset_password_email_handler(
 ) -> AppResult<impl IntoResponse> {
     let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
-    if redis.get(&key).await?.is_some() {
+    if redis.get::<String>(&key).await?.is_some() {
         return Err(ApiError(ApiInnerError::CodeIntervalRejection));
     }
 
@@ -200,7 +200,7 @@ pub async fn verify_active_account_code_handler(
     }
 
     let key = format!("{}_{}", claims.uid, constants::REDIS_ACTIVE_ACCOUNT_KEY);
-    if let Some(active_code_stored) = redis.get(&key).await? {
+    if let Some(active_code_stored) = redis.get::<String>(&key).await? {
         if active_code_stored == body.code {
             BwAccount::update_email_verified_at(state.get_db(), claims.uid)
                 .await?;
@@ -232,7 +232,7 @@ pub async fn change_password_handler(
     let mut redis = state.get_redis().await?;
     let key = format!("{}_{}", claims.uid, constants::REDIS_RESET_PASSWORD_KEY);
 
-    if let Some(active_code_stored) = redis.get(&key).await? {
+    if let Some(active_code_stored) = redis.get::<String>(&key).await? {
         if active_code_stored == body.code {
             let item = ResetPasswordSchema {
                 account_id: claims.uid,

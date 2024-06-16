@@ -6,7 +6,6 @@ pub mod service;
 
 use std::sync::Arc;
 
-
 use crate::miner::bootstrap::AppState;
 
 pub async fn serve() {

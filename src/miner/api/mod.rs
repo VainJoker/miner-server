@@ -14,7 +14,7 @@ pub mod route;
 pub struct Server {
     pub host: &'static str,
     pub port: usize,
-    pub app_state: Arc<AppState>
+    pub app_state: Arc<AppState>,
 }
 
 impl Server {
@@ -22,10 +22,14 @@ impl Server {
         let config = cfg::config();
         let host = &config.miner.api_host;
         let port = config.miner.api_port;
-        Self { host, port, app_state }
+        Self {
+            host,
+            port,
+            app_state,
+        }
     }
 
-    pub async fn serve(self, ) {
+    pub async fn serve(self) {
         let app = route::init(self.app_state.clone());
         let listener =
             TcpListener::bind(format!("{}:{}", self.host, self.port))

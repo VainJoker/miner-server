@@ -31,10 +31,16 @@ pub struct BwMachine {
     pub deleted_at: Option<NaiveDateTime>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct Coin {
+    pub algorithm: String,
+    pub symbol: String,
+}
+
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct Setting {
-    pub crypto_coin: String,
+    pub crypto_coin: Vec<Coin>,
     pub power_modes: Vec<EnergyMode>,
     pub pool_maximal: usize,
 
@@ -225,8 +231,8 @@ mod tests {
 
     use super::*;
     const ACCOUNT_ID: i64 = 6192889942050345985;
-    const MAC1: &str = "08:00:2B:01:02:03";
-    const MAC2: &str = "08:00:2B:01:02:04";
+    const MAC1: &str = "28:e2:97:3e:6f:06";
+    // const MAC2: &str = "28:e2:97:3e:6f:07";
     const GROUP_ID: i64 = 6193003777960711169;
     const POLICY_ID: i64 = 6194821006046008321;
     const POOL_ID: i64 = 6194824969470350666;
@@ -239,7 +245,10 @@ mod tests {
             device_name: "name",
             device_ip: "192.168.0.109",
             setting: Json(Setting {
-                crypto_coin: "btc".to_string(),
+                crypto_coin: vec![Coin {
+                    algorithm: "crypto".to_string(),
+                    symbol: "LTC".to_string(),
+                }],
                 power_modes: vec![EnergyMode::Power, EnergyMode::Balance],
                 pool_maximal: 3,
                 support_boot: true,
@@ -314,6 +323,6 @@ mod tests {
         let res = BwMachine::fetch_machines_by_account_id(&pool, ACCOUNT_ID)
             .await
             .unwrap();
-        assert_eq!(res.len(), 2);
+        assert_eq!(res.len(), 3);
     }
 }

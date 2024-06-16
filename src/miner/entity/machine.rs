@@ -1,17 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
-
 use serde_derive::{Deserialize, Serialize};
 use sqlx::types::Json;
 
 use crate::{
-    library::error::AppResult,
-    miner::{
-        bootstrap::AppState,
-        entity::mqtt::{
-            Coin, MessageStatus, MessageUpdate, MessageUpdateBasic, Pool,
-        },
+    miner::entity::mqtt::{
+        MessageStatus, MessageUpdate, MessageUpdateBasic, Pool,
     },
-    models::machine::{BwMachine, Setting},
+    models::machine::{BwMachine, Coin, Setting},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -124,125 +118,124 @@ impl ReadMachineResponse {
     }
 }
 
-pub async fn get_machines(
-    app_state: Arc<AppState>,
-    account_id: i64,
-) -> AppResult<()> {
-    let mut redis = app_state.get_redis().await?;
-    let r_user_key = &format!("miner_user:{}", account_id);
+// pub async fn get_machines(
+//     app_state: Arc<AppState>,
+//     account_id: i64,
+// ) -> AppResult<()> {
+//     let mut redis = app_state.get_redis().await?;
+//     let r_user_key = &format!("miner_user:{}", account_id);
 
-    let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
+//     let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
 
-    let r_status_keys: Vec<_> = r_user_fields
-        .iter()
-        .map(|k| format!("miner_status:{}", k))
-        .collect();
-    let r_status_keys: Vec<_> =
-        r_status_keys.iter().map(|s| s.as_str()).collect();
+//     let r_status_keys: Vec<_> = r_user_fields
+//         .iter()
+//         .map(|k| format!("miner_status:{}", k))
+//         .collect();
+//     let r_status_keys: Vec<_> =
+//         r_status_keys.iter().map(|s| s.as_str()).collect();
 
-    let r_status_value = redis.hgetalls(&r_status_keys).await?;
-    eprintln!("000{:#?}", r_status_value);
-    let mut online_map: HashMap<String, (MessageUpdate, MessageStatus)> =
-        HashMap::new();
-    let mut none_indices = Vec::new();
-    for (i, v) in r_status_value.iter().enumerate() {
-        if v.is_empty() {
-            none_indices.push(i);
-            continue;
-        }
-        let status_str = v.get("status").unwrap();
-        let mode_str = v.get("mode").unwrap();
-        eprintln!("111:{:#?}", status_str);
-        eprintln!("222:{:#?}", mode_str);
-        let online_status: MessageUpdate =
-            serde_json::from_str(status_str).unwrap();
-        let online_mode: MessageStatus =
-            serde_json::from_str(mode_str).unwrap();
-        online_map.insert(
-            r_user_fields.get(i).unwrap().clone().to_lowercase(),
-            (online_status, online_mode),
-        );
-    }
-    eprintln!("333{:#?}", online_map);
-    eprintln!("444{:#?}", none_indices);
+//     let r_status_value = redis.hgetalls(&r_status_keys).await?;
+//     eprintln!("000{:#?}", r_status_value);
+//     let mut online_map: HashMap<String, (MessageUpdate, MessageStatus)> =
+//         HashMap::new();
+//     let mut none_indices = Vec::new();
+//     for (i, v) in r_status_value.iter().enumerate() {
+//         if v.is_empty() {
+//             none_indices.push(i);
+//             continue;
+//         }
+//         let status_str = v.get("status").unwrap();
+//         let mode_str = v.get("mode").unwrap();
+//         eprintln!("111:{:#?}", status_str);
+//         eprintln!("222:{:#?}", mode_str);
+//         let online_status: MessageUpdate =
+//             serde_json::from_str(status_str).unwrap();
+//         let online_mode: MessageStatus =
+//             serde_json::from_str(mode_str).unwrap();
+//         online_map.insert(
+//             r_user_fields.get(i).unwrap().clone().to_lowercase(),
+//             (online_status, online_mode),
+//         );
+//     }
+//     eprintln!("333{:#?}", online_map);
+//     eprintln!("444{:#?}", none_indices);
 
-    let mut offline_map: HashMap<String, MessageUpdateBasic> = HashMap::new();
-    if !none_indices.is_empty() {
-        let none_machine_hash_keys: Vec<_> = none_indices
-            .into_iter()
-            .map(|i| &r_user_fields[i])
-            .collect();
-        let none_machine_hash_keys: Vec<_> =
-            none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
-        eprintln!("555{:#?}", none_machine_hash_keys);
-        let r_user_values =
-            redis.hgets(r_user_key, &none_machine_hash_keys).await?;
-        eprintln!("666{:#?}", r_user_values);
+//     let mut offline_map: HashMap<String, MessageUpdateBasic> =
+// HashMap::new();     if !none_indices.is_empty() {
+//         let none_machine_hash_keys: Vec<_> = none_indices
+//             .into_iter()
+//             .map(|i| &r_user_fields[i])
+//             .collect();
+//         let none_machine_hash_keys: Vec<_> =
+//             none_machine_hash_keys.iter().map(|s| s.as_str()).collect();
+//         eprintln!("555{:#?}", none_machine_hash_keys);
+//         let r_user_values =
+//             redis.hgets(r_user_key, &none_machine_hash_keys).await?;
+//         eprintln!("666{:#?}", r_user_values);
 
-        for (i, v) in r_user_values.iter().enumerate() {
-            let status_str = v.clone().unwrap();
-            let offline_status: MessageUpdateBasic =
-                serde_json::from_str(&status_str).unwrap();
-            offline_map.insert(
-                r_user_fields.get(i).unwrap().clone().to_lowercase(),
-                offline_status,
-            );
-        }
-    }
+//         for (i, v) in r_user_values.iter().enumerate() {
+//             let status_str = v.clone().unwrap();
+//             let offline_status: MessageUpdateBasic =
+//                 serde_json::from_str(&status_str).unwrap();
+//             offline_map.insert(
+//                 r_user_fields.get(i).unwrap().clone().to_lowercase(),
+//                 offline_status,
+//             );
+//         }
+//     }
 
-    let bw_machines =
-        BwMachine::fetch_machines_by_account_id(app_state.get_db(), account_id)
-            .await
-            .expect("Failed to fetch machines");
-    let mut db_hash: HashMap<String, BwMachine> = HashMap::new();
-    for bw_machine in bw_machines {
-        db_hash.insert(bw_machine.mac.clone().to_lowercase(), bw_machine);
-    }
+//     let bw_machines =
+//         BwMachine::fetch_machines_by_account_id(app_state.get_db(),
+// account_id)             .await
+//             .expect("Failed to fetch machines");
+//     let mut db_hash: HashMap<String, BwMachine> = HashMap::new();
+//     for bw_machine in bw_machines {
+//         db_hash.insert(bw_machine.mac.clone().to_lowercase(), bw_machine);
+//     }
 
-    eprintln!("888{:#?}", db_hash);
+//     eprintln!("888{:#?}", db_hash);
 
-    let mut machines = Vec::new();
-    for (mac, (status, mode)) in online_map {
-        let config = db_hash.get(&mac).unwrap();
+//     let mut machines = Vec::new();
+//     for (mac, (status, mode)) in online_map {
+//         let config = db_hash.get(&mac).unwrap();
 
-        let machine = ReadMachineResponse::from_online(config, status, mode);
-        eprintln!("{:#?}", machine);
-        machines.push(machine);
-    }
+//         let machine = ReadMachineResponse::from_online(config, status, mode);
+//         eprintln!("{:#?}", machine);
+//         machines.push(machine);
+//     }
 
-    for (mac, status) in offline_map {
-        let config = db_hash.get(&mac).unwrap();
-        let machine = ReadMachineResponse::from_offline(config, status);
-        eprintln!("{:#?}", machine);
-        machines.push(machine);
-    }
+//     for (mac, status) in offline_map {
+//         let config = db_hash.get(&mac).unwrap();
+//         let machine = ReadMachineResponse::from_offline(config, status);
+//         eprintln!("{:#?}", machine);
+//         machines.push(machine);
+//     }
 
-    eprintln!("999{:#?}", machines);
+//     eprintln!("999{:#?}", machines);
 
-    Ok(())
-}
+//     Ok(())
+// }
 
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use super::*;
-    use crate::{library::cfg, miner::bootstrap::AppState};
-
-    const ACCOUNT_ID: i64 = 6192889942050345985;
-
-    const MAC1: &str = "28:E2:97:3E:6F:06";
-    const MAC2: &str = "28:E2:97:4D:1A:87";
-
-    #[tokio::test]
-    async fn test_get_machines() {
-        cfg::init(&"./fixtures/config.toml".to_string());
-        let app_state = Arc::new(AppState::init().await);
-
-        // let mut redis = app_state.get_redis().await.unwrap();
-
-        let res = get_machines(app_state, ACCOUNT_ID).await;
-
-        // eprintln!("{:#?}", res);
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use std::sync::Arc;
+//
+//     use crate::{library::cfg, miner::bootstrap::AppState};
+//
+//     const ACCOUNT_ID: i64 = 6192889942050345985;
+//
+//     const MAC1: &str = "28:E2:97:3E:6F:06";
+//     const MAC2: &str = "28:E2:97:4D:1A:87";
+//
+//     #[tokio::test]
+//     async fn test_get_machines() {
+//         cfg::init(&"./fixtures/config.toml".to_string());
+//         // let app_state = Arc::new(AppState::init().await);
+//
+//         // let mut redis = app_state.get_redis().await.unwrap();
+//
+//         // let res = get_machines(app_state, ACCOUNT_ID).await;
+//
+//         // eprintln!("{:#?}", res);
+//     }
+// }

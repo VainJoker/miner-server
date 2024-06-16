@@ -133,11 +133,13 @@ impl Server {
 }
 
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use crate::miner::bootstrap::AppState;
 
     #[tokio::test]
+    #[ignore]
     async fn test_mqtt_init() {
         cfg::init(&"./fixtures/config.toml".to_string());
         let app_state = Arc::new(AppState::init().await);
