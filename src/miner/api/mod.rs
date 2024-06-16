@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 
 use crate::{
-    library::{cfg, error::AppResult},
+    library::cfg,
     miner::bootstrap::{shutdown_signal, AppState},
 };
 
@@ -12,21 +12,21 @@ pub mod middleware;
 pub mod route;
 
 pub struct Server {
-    pub host: String,
-    pub port: String,
+    pub host: &'static str,
+    pub port: usize,
+    pub app_state: Arc<AppState>
 }
 
 impl Server {
-    pub fn init(host: String, port: String) -> Self {
-        Self { host, port }
+    pub fn init(app_state: Arc<AppState>) -> Self {
+        let config = cfg::config();
+        let host = &config.miner.api_host;
+        let port = config.miner.api_port;
+        Self { host, port, app_state }
     }
 
-    pub async fn serve(&self, miner_state: Arc<AppState>) {
-        // let miner_state = Arc::new(AppState::init().await);
-        // Create a regular axum app.
-        let app = route::init(miner_state.clone());
-
-        // let cfg = cfg::config();
+    pub async fn serve(self, ) {
+        let app = route::init(self.app_state.clone());
         let listener =
             TcpListener::bind(format!("{}:{}", self.host, self.port))
                 .await
@@ -41,12 +41,10 @@ impl Server {
             ))
         );
 
-        // miner_state.clone().serve().await;
-
         // Run the server with graceful shutdown
         axum::serve(listener, app)
-            .with_graceful_shutdown(shutdown_signal(miner_state.clone()))
+            .with_graceful_shutdown(shutdown_signal())
             .await
-            .unwrap_or_else(|e| panic!("💥 Failed to start webserver: {e:?}"));
+            .unwrap_or_else(|e| panic!("💥 Failed to start API server: {e:?}"));
     }
 }

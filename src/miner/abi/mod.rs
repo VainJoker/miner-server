@@ -1,7 +1,10 @@
+use std::sync::Arc;
+
 use tonic::{Request, Response, Status};
 
+use super::bootstrap::{shutdown_signal, AppState};
 use crate::{
-    library::{cfg, error::AppResult},
+    library::cfg,
     pb::miner_sign::{
         miner_sign_server::{MinerSign, MinerSignServer},
         SignRequest, SignResponse,
@@ -9,8 +12,9 @@ use crate::{
 };
 
 pub struct Server {
-    pub host: String,
+    pub host: &'static str,
     pub port: usize,
+    pub app_state: Arc<AppState>
 }
 
 #[tonic::async_trait]
@@ -34,23 +38,30 @@ impl MinerSign for Server {
 }
 
 impl Server {
-    pub fn init(host: &str, port: usize) -> Self {
-        Self {
-            host: host.to_string(),
-            port,
-        }
+    pub fn init(app_state: Arc<AppState>) -> Self {
+        let config = cfg::config();
+        let host = &config.miner.grpc_host;
+        let port = config.miner.grpc_port;
+        Self { host, port, app_state }
     }
 
-    pub async fn serve(&self) -> AppResult<()> {
+    pub async fn serve(self) {
         let addr = format!("{}:{}", self.host, self.port);
-        let addr = addr
-            .parse()
-            .expect("gRPC server address should be a valid socket address");
+        let addr = addr.parse().unwrap_or_else(|e| {
+            panic!("💥 Failed to connect bind TcpListener: {e:?}")
+        });
         let signer = MinerSignServer::new(self);
 
-        Ok(tonic::transport::Server::builder()
+        tracing::info!(
+            "✨ listening on {}", addr
+        );
+
+        tonic::transport::Server::builder()
+            .trace_fn(|_| tracing::info_span!("grpc_server"))
             .add_service(signer)
-            .serve(addr)
-            .await?)
+            .serve_with_shutdown(addr, shutdown_signal())
+            .await
+            .unwrap_or_else(|e| panic!("💥 Failed to start ABI server: {e:?}"));
+
     }
 }

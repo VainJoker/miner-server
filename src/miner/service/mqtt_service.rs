@@ -31,7 +31,7 @@ impl Server {
         for topic in &mqtt_cfg.topics {
             match client.subscribe(&topic.topics, QoS::AtMostOnce).await {
                 Ok(_) => {
-                    tracing::info!("Subscribed to topic {}", topic.topics);
+                    tracing::debug!("Subscribed to topic {}", topic.topics);
                 }
                 Err(e) => {
                     tracing::error!(

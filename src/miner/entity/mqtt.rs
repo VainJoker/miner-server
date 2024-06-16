@@ -1,7 +1,6 @@
-use std::{fmt, sync::Arc};
+use std::sync::Arc;
 
-use serde::{de, Deserialize, Deserializer, Serialize};
-use serde_json::Value;
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     library::{error::AppResult, Redis},

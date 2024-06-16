@@ -40,7 +40,8 @@ impl AppState {
     }
 }
 
-pub async fn shutdown_signal(app_state: Arc<AppState>) {
+// pub async fn shutdown_signal(app_state: Arc<AppState>) {
+pub async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
@@ -66,5 +67,5 @@ pub async fn shutdown_signal(app_state: Arc<AppState>) {
             tracing::info!("Terminate signal received.");
         },
     }
-    app_state.services.shutdown().await;
+    // app_state.services.shutdown().await;
 }
