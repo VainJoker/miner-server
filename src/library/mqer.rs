@@ -44,13 +44,13 @@ pub struct Subscriber {
 }
 
 impl Subscriber {
-    pub fn new<F>(func: F, mqer: Mqer) -> Self
+    pub fn new<F>(func: F, mqer: Arc<Mqer>) -> Self
     where
         F: Fn(String) + Send + Sync + 'static,
     {
         Self {
             func: Arc::new(Box::new(func)),
-            mqer: Arc::new(mqer),
+            mqer,
         }
     }
 }
@@ -342,6 +342,8 @@ mod tests {
     //     message::DeliveryResult, options::BasicAckOptions,
     // };
 
+    use std::sync::Arc;
+
     use crate::library::{cfg, mqer::Subscriber, Mqer};
 
     #[tokio::test]
@@ -369,7 +371,7 @@ mod tests {
     #[ignore]
     async fn test_basic_receive() {
         cfg::init(&"./fixtures/config.toml".to_string());
-        let mqer = Mqer::init();
+        let mqer = Arc::new(Mqer::init());
         let func = |message: String| {
             eprintln!("{message}");
         };

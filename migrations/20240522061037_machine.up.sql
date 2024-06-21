@@ -1,6 +1,6 @@
 -- Add up migration script here
 CREATE TABLE bw_machine (
-    mac MACADDR PRIMARY KEY,
+    mac MACADDR NOT NULL,
     account_id BIGINT NOT NULL,
     device_type VARCHAR (50) NOT NULL,
     device_name VARCHAR (50) NOT NULL,
@@ -14,7 +14,9 @@ CREATE TABLE bw_machine (
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
-    deleted_at TIMESTAMP
+    deleted_at TIMESTAMP,
+
+    PRIMARY KEY (mac, account_id)
 );
 
 

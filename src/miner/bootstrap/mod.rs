@@ -27,6 +27,7 @@ impl AppState {
     pub async fn serve(self: Arc<Self>) {
         self.services.clone().serve(self).await;
     }
+
     pub const fn get_db(&self) -> &DB {
         &self.db.pool
     }
@@ -35,7 +36,7 @@ impl AppState {
         Ok(self.redis.get_redis().await?)
     }
 
-    pub fn get_mq(&self) -> AppResult<Mqer> {
+    pub fn get_mq(&self) -> AppResult<Arc<Mqer>> {
         Ok(self.services.message_queue.mqer.clone())
     }
 }

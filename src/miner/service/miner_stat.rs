@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use serde::{Deserialize, Serialize};
 use tokio::time::interval;
 
+use super::Service;
 use crate::{
     library::{
         cfg,
@@ -16,8 +17,8 @@ pub struct Server {
     coin_stat: Arc<CoinStat>,
 }
 
-impl Server {
-    pub fn init() -> Server {
+impl Service for Server {
+    async fn init() -> Server {
         let cfg = cfg::config();
         let coin_stat_host = &cfg.miner.coin_stat.host;
         let coin_stat_duration =
@@ -30,8 +31,8 @@ impl Server {
         }
     }
 
-    pub fn serve(self, app_state: Arc<AppState>) {
-        let coin_stat = self.coin_stat;
+    async fn serve(&mut self, app_state: Arc<AppState>) {
+        let coin_stat = self.coin_stat.clone();
 
         tokio::spawn(async move {
             let mut interval = interval(coin_stat.duration);
@@ -58,7 +59,7 @@ impl Server {
         });
     }
 
-    pub fn shutdown(&self) {}
+    async fn shutdown(&self) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]

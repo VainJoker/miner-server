@@ -10,6 +10,9 @@ use crate::miner::bootstrap::AppState;
 
 pub async fn serve() {
     let miner_state = Arc::new(AppState::init().await);
+
+    AppState::serve(miner_state.clone()).await;
+
     let miner_state1 = miner_state.clone();
     let api_server = tokio::spawn(async move {
         api::Server::init(miner_state1).serve().await;

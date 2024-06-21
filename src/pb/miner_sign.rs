@@ -51,14 +51,14 @@ pub struct SignResponse {
     pub result: i32,
     #[prost(string, tag = "2")]
     pub ms: ::prost::alloc::string::String,
-    #[prost(int32, tag = "3")]
-    pub mpt: i32,
+    #[prost(uint32, tag = "3")]
+    pub mpt: u32,
     #[prost(string, tag = "4")]
     pub mu: ::prost::alloc::string::String,
     #[prost(string, tag = "5")]
     pub mp: ::prost::alloc::string::String,
-    #[prost(int64, tag = "6")]
-    pub t: i64,
+    #[prost(uint64, tag = "6")]
+    pub t: u64,
 }
 /// Generated client implementations.
 pub mod miner_sign_client {

@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use serde_derive::{Deserialize, Serialize};
 use tokio::time::interval;
 
+use super::Service;
 use crate::{
     library::{
         cfg,
@@ -16,8 +17,8 @@ pub struct Server {
     exchange_rate: Arc<ExchangeRate>,
 }
 
-impl Server {
-    pub fn init() -> Server {
+impl Service for Server {
+    async fn init() -> Server {
         let cfg = cfg::config();
         let exchange_rate_host = &cfg.miner.exchange_rate.host;
         let exchange_rate_key = &cfg.miner.exchange_rate.key;
@@ -32,8 +33,8 @@ impl Server {
             exchange_rate: Arc::new(exchange_rate),
         }
     }
-    pub fn serve(self, app_state: Arc<AppState>) {
-        let exchange_rate = self.exchange_rate;
+    async fn serve(&mut self, app_state: Arc<AppState>) {
+        let exchange_rate = self.exchange_rate.clone();
 
         tokio::spawn(async move {
             let mut redis = app_state.get_redis().await.unwrap();
@@ -61,7 +62,7 @@ impl Server {
         });
     }
 
-    pub fn shutdown(&self) {}
+    async fn shutdown(&self) {}
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

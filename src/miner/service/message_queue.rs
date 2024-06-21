@@ -1,19 +1,27 @@
+use std::sync::Arc;
+
+use super::Service;
 use crate::{
     library::{error::AppResult, mailor::Email, mqer::Subscriber, Mqer},
-    miner::bootstrap::constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
+    miner::bootstrap::{
+        constants::{MQ_SEND_EMAIL_QUEUE, MQ_SEND_EMAIL_TAG},
+        AppState,
+    },
 };
 
 #[derive(Clone)]
 pub struct Server {
-    pub mqer: Mqer,
+    pub mqer: Arc<Mqer>,
 }
 
-impl Server {
-    pub fn init() -> Server {
-        Server { mqer: Mqer::init() }
+impl Service for Server {
+    async fn init() -> Server {
+        Server {
+            mqer: Arc::new(Mqer::init()),
+        }
     }
 
-    pub async fn serve(&self) {
+    async fn serve(&mut self, _app_state: Arc<AppState>) {
         match self.email_sender().await {
             Ok(()) => {}
             Err(e) => {
@@ -22,7 +30,7 @@ impl Server {
         };
     }
 
-    pub fn shutdown(&self) {
+    async fn shutdown(&self) {
         match self.mqer.graceful_shutdown() {
             Ok(()) => {}
             Err(e) => {
@@ -30,7 +38,9 @@ impl Server {
             }
         }
     }
+}
 
+impl Server {
     pub async fn email_sender(&self) -> AppResult<()> {
         tracing::debug!("customer started");
         let func = |message: String| {

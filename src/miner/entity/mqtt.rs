@@ -11,21 +11,21 @@ use crate::{
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum Message {
-    MessageStatus(MessageStatus),
-    MessageUpdate(Box<MessageUpdate>),
+    MessageMode(MessageMode),
+    MessageStatus(Box<MessageStatus>),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MessageMode {
+    pub mode: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct MessageStatus {
-    pub(crate) mode: usize,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MessageUpdate {
     #[serde(rename = "nowrate")]
-    pub(crate) now_rate: f64,
+    pub now_rate: f64,
     #[serde(rename = "avgrate")]
-    pub(crate) avg_rate: f64,
+    pub avg_rate: f64,
     #[serde(rename = "historyrate")]
     pub(crate) history_rate: Vec<f64>,
     #[serde(rename = "powermode")]
@@ -45,14 +45,14 @@ pub struct MessageUpdate {
     pub(crate) coin: Option<Coin>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct MessageUpdateBasic {
-    pub(crate) pool: Vec<Pool>,
-    // led: i32,
-    pub(crate) ip: String,
-    #[serde(rename = "coin", deserialize_with = "from_coin")]
-    pub(crate) coin: Option<Coin>,
-}
+// #[derive(Serialize, Deserialize, Debug)]
+// pub struct MessageUpdateBasic {
+//     pub(crate) pool: Vec<Pool>,
+//     // led: i32,
+//     pub(crate) ip: String,
+//     #[serde(rename = "coin", deserialize_with = "from_coin")]
+//     pub(crate) coin: Option<Coin>,
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Pool {
@@ -67,12 +67,6 @@ pub struct Pool {
     pass: String,
 }
 
-// #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-// pub struct Coin {
-//     algorithm: String,
-//     symbol: String,
-// }
-
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum CoinFormat {
@@ -80,15 +74,15 @@ enum CoinFormat {
     Detailed(Coin),
 }
 
-impl From<&MessageUpdate> for MessageUpdateBasic {
-    fn from(value: &MessageUpdate) -> Self {
-        MessageUpdateBasic {
-            pool: value.pool.clone(),
-            ip: value.ip.clone(),
-            coin: value.coin.clone(),
-        }
-    }
-}
+// impl From<&MessageUpdate> for MessageUpdateBasic {
+//     fn from(value: &MessageUpdate) -> Self {
+//         MessageUpdateBasic {
+//             pool: value.pool.clone(),
+//             ip: value.ip.clone(),
+//             coin: value.coin.clone(),
+//         }
+//     }
+// }
 
 // TODO: Check?
 impl Message {
@@ -100,8 +94,8 @@ impl Message {
         let mut redis = app_state.get_redis().await?;
         let r_key = format!("miner_status:{}", mac);
         let r_field = match self {
-            Message::MessageStatus(_) => "mode",
-            Message::MessageUpdate(_) => "status",
+            Message::MessageMode(_) => "mode",
+            Message::MessageStatus(_) => "status",
         };
         let r_value = serde_json::to_string(&self).map_err(|e| {
             let format_err =
@@ -111,97 +105,11 @@ impl Message {
         })?;
         redis.hset(&r_key, r_field, &r_value).await?;
         let t_now = Utc::now().timestamp();
-        redis.hset(&r_key, r_field, &t_now).await?;
+        redis.hset(&r_key, "time", &t_now).await?;
         redis.expire(&r_key, 259200).await?;
         Ok(())
     }
 }
-
-// impl MessageStatus {
-//     pub async fn store(&self, redis: &mut Redis, mac: &str) -> AppResult<()>
-// {         let r_status_key = format!("miner_status:{}", mac);
-//         let r_status_value = serde_json::to_string(self).map_err(|e| {
-//             let format_err =
-//                 format!("Error occurred while serializing message: {}", e);
-//             tracing::error!("{}", format_err);
-//             anyhow::anyhow!(format_err)
-//         })?;
-//         redis.hset(&r_status_key, "mode", &r_status_value).await?;
-//         redis.expire(&r_status_key, 60 * 60).await?;
-//         tracing::debug!("Updated miner status for MAC: {}", mac);
-//         Ok(())
-//     }
-// }
-
-// impl MessageUpdate {
-//     pub async fn store(
-//         &self,
-//         mac: &str,
-//         app_state: Arc<AppState>,
-//     ) -> AppResult<()> {
-//         let mut redis = app_state.get_redis().await?;
-//         let r_status_key = format!("miner_status:{}", mac);
-//         let r_status_value = serde_json::to_string(&self).map_err(|e| {
-//             let format_err =
-//                 format!("Error occurred while serializing message: {}", e);
-//             tracing::error!("{}", format_err);
-//             anyhow::anyhow!(format_err)
-//         })?;
-//         redis.hset(&r_status_key, "status", &r_status_value).await?;
-//         redis.expire(&r_status_key, 60).await?;
-//         tracing::debug!("Updated miner update for MAC: {}", mac);
-
-//         let r_account_key = format!("account_key:{}", self.key);
-//         let account_id = match redis.get(&r_account_key).await? {
-//             Some(id) => id,
-//             None => {
-//                 let account_id = BwAccountSetting::fetch_account_id_by_key(
-//                     app_state.get_db(),
-//                     &self.key,
-//                 )
-//                 .await?
-//                 .to_string();
-//                 redis.set(&r_account_key, &account_id).await?;
-//                 account_id
-//             }
-//         };
-//         let r_user_key = format!("miner_user:{}", account_id);
-//         let basic_value = MessageUpdateBasic::from(self);
-//         let r_user_value =
-//             serde_json::to_string(&basic_value).map_err(|e| {
-//                 let format_err =
-//                     format!("Error occurred while serializing message: {}",
-// e);                 tracing::error!("{}", format_err);
-//                 anyhow::anyhow!(format_err)
-//             })?;
-//         redis.hset(&r_user_key, mac, &r_user_value).await?;
-//         redis.expire(&r_user_key, 3600 * 24 * 30).await?;
-//         tracing::debug!("Updated user key for account ID: {}", account_id);
-
-//         Ok(())
-//     }
-// }
-
-// fn from_coin<'de, D>(deserializer: D) -> Result<Option<Coin>, D::Error>
-// where
-//     D: Deserializer<'de>,
-// {
-//     let coin_format = CoinFormat::deserialize(deserializer)?;
-//     match coin_format {
-//         CoinFormat::Simple(s) => {
-//             let parts: Vec<&str> = s.split('(').collect();
-//             if parts.len() == 2 {
-//                 let algorithm = parts[0].to_string();
-//                 let symbol = parts[1].trim_end_matches(')').to_string();
-//                 Ok(Some(Coin { algorithm, symbol }))
-//             } else {
-//                 tracing::error!("Invalid coin format: {}", s);
-//                 Ok(None)
-//             }
-//         }
-//         CoinFormat::Detailed(d) => Ok(Some(d)),
-//     }
-// }
 
 fn from_coin<'de, D>(deserializer: D) -> Result<Option<Coin>, D::Error>
 where

@@ -24,13 +24,11 @@ impl Redisor {
         let deadpool = deadpool_redis::Config::from_url(url);
         match deadpool.create_pool(Some(Runtime::Tokio1)) {
             Ok(pool) => {
-                tracing::info!(
-                    "🚀 Connection to the self.connection is successful!"
-                );
+                tracing::info!("🚀 Connection to the redis is successful!");
                 Self { pool, prefix }
             }
             Err(err) => {
-                panic!("💥 Failed to connect to the self.connection: {err:?}");
+                panic!("💥 Failed to connect to the redis: {err:?}");
             }
         }
     }

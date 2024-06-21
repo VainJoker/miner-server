@@ -28,10 +28,10 @@ message SignRequest{
 message SignResponse{
   int32 result = 1;
   string ms = 2;
-  int32 mpt = 3;
+  uint32 mpt = 3;
   string mu = 4;
   string mp = 5;
-  int64 t = 6;
+  uint64 t = 6;
 }
 
 

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use sqlx::types::Json;
+use rand::{distributions::Alphanumeric, Rng};
+use sqlx::types::{chrono, Json};
 use tonic::{Request, Response, Status};
 
 use super::bootstrap::{shutdown_signal, AppState};
@@ -32,16 +33,16 @@ impl MinerSign for Server {
         request: Request<SignRequest>,
     ) -> Result<Response<SignResponse>, Status> {
         let inner = request.into_inner();
-        // println!("{:#?}", inner);
         self.store(inner).await.expect("Failed");
-
+        let mqtt_config = cfg::config().miner.mqtt.clone();
+        let emqx_user = self.rand_emqx_user();
         let reply = SignResponse {
             result: 0,
-            ms: "".to_string(),
-            mpt: 0,
-            mu: "".to_string(),
-            mp: "".to_string(),
-            t: 0,
+            ms: mqtt_config.host.clone(),
+            mpt: mqtt_config.port as u32,
+            mu: emqx_user.0,
+            mp: emqx_user.1,
+            t: chrono::Utc::now().timestamp() as u64,
         };
         Ok(Response::new(reply))
     }
@@ -119,5 +120,17 @@ impl Server {
             .await
             .expect("Failed to add machine");
         Ok(())
+    }
+
+    fn rand_emqx_user(&self) -> (String, String) {
+        let str_size = 15;
+        let mut rng = rand::thread_rng();
+        let account: String = (0..str_size)
+            .map(|_| rng.sample(Alphanumeric) as char)
+            .collect();
+        let password: String = (0..str_size)
+            .map(|_| rng.sample(Alphanumeric) as char)
+            .collect();
+        (account, password)
     }
 }

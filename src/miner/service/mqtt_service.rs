@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
-use rumqttc::{AsyncClient, Event, EventLoop, Incoming, MqttOptions, QoS};
+use rumqttc::v5::{
+    mqttbytes::QoS, AsyncClient, Event, EventLoop, Incoming, MqttOptions,
+};
 use tokio::sync::Mutex;
 
+use super::Service;
 use crate::{
     library::cfg,
     miner::{bootstrap::AppState, entity::mqtt::Message},
@@ -14,8 +17,8 @@ pub struct Server {
     pub event_loop: Arc<Mutex<EventLoop>>,
 }
 
-impl Server {
-    pub async fn init() -> Self {
+impl Service for Server {
+    async fn init() -> Self {
         let cfg = cfg::config();
         let mqtt_cfg = &cfg.miner.mqtt;
         let mut mqtt_opts = MqttOptions::new(
@@ -30,7 +33,7 @@ impl Server {
 
         for topic in &mqtt_cfg.topics {
             match client.subscribe(&topic.topics, QoS::AtMostOnce).await {
-                Ok(_) => {
+                Ok(()) => {
                     tracing::debug!("Subscribed to topic {}", topic.topics);
                 }
                 Err(e) => {
@@ -48,7 +51,7 @@ impl Server {
         }
     }
 
-    pub async fn serve(&mut self, app_state: Arc<AppState>) {
+    async fn serve(&mut self, app_state: Arc<AppState>) {
         tracing::debug!("MQTT service started");
         let ep = self.event_loop.clone();
         tokio::spawn(async move {
@@ -60,12 +63,12 @@ impl Server {
                 match result {
                     Ok(Event::Incoming(Incoming::Publish(p))) => {
                         tracing::trace!(
-                            "Received message on topic: {}, Payload: {:?}",
-                            p.topic,
+                            "Received message on topic: {:?}, Payload len: {:?}",
+                            &String::from_utf8_lossy(&p.topic),
                             p.payload
                         );
                         Self::handle_message(
-                            &p.topic,
+                            &String::from_utf8_lossy(&p.topic),
                             p.payload.as_ref(),
                             app_state.clone(),
                         )
@@ -85,13 +88,15 @@ impl Server {
         });
     }
 
-    pub async fn shutdown(&self) {
+    async fn shutdown(&self) {
         tracing::info!("MQTT service stopping");
         if let Err(e) = self.client.disconnect().await {
             tracing::error!("Error occurred while disconnecting: {}", e);
         }
     }
+}
 
+impl Server {
     async fn handle_message(
         topic: &str,
         payload: &[u8],
@@ -114,7 +119,7 @@ impl Server {
                         return;
                     }
                 };
-                tracing::debug!("MAC: {}, Message: {:#?}", mac, message);
+                tracing::trace!("MAC: {}, Message: {:#?}", mac, message);
                 if let Err(e) = message.store(app_state, mac).await {
                     tracing::error!(
                         "Error occurred while handling message: {}",

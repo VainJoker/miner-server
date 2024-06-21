@@ -2,10 +2,8 @@ use serde_derive::{Deserialize, Serialize};
 use sqlx::types::Json;
 
 use crate::{
-    miner::entity::mqtt::{
-        MessageStatus, MessageUpdate, MessageUpdateBasic, Pool,
-    },
-    models::machine::{BwMachine, Coin, Setting},
+    miner::entity::mqtt::Pool,
+    models::machine::{Coin, Setting},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -46,76 +44,76 @@ pub struct ReadMachineResponse {
 }
 
 impl ReadMachineResponse {
-    pub fn from_online(
-        config: &BwMachine,
-        status: MessageUpdate,
-        mode: MessageStatus,
-    ) -> Self {
-        Self {
-            mac: config.mac.clone(),
-            account_id: config.account_id,
-            mode: mode.mode,
-            now_rate: Some(status.now_rate),
-            avg_rate: Some(status.avg_rate),
-            history_rate: Some(status.history_rate),
-            power_mode: Some(status.power_mode),
-            dig_time: Some(status.dig_time),
-            pool: status.pool,
-            hard_err: Some(status.hard_err),
-            refuse: Some(status.refuse),
-            temperature: Some(status.temperature),
-            fan: Some(status.fan),
-            led: Some(status.led),
-            coin: status.coin,
-            device_type: config.device_type.clone(),
-            device_name: config.device_name.clone(),
-            device_ip: status.ip,
-            group_id: config.group_id,
-            group_name: Some("".to_string()),
-            policy_id: config.policy_id,
-            policy_name: Some("".to_string()),
-            pool_id: config.pool_id,
-            pool_name: Some("".to_string()),
-            setting: config.setting.clone(),
-            hardware_version: config.hardware_version.clone(),
-            software_version: config.software_version.clone(),
-        }
-    }
+    // pub fn from_online(
+    //     config: &BwMachine,
+    //     status: MessageUpdate,
+    //     mode: MessageStatus,
+    // ) -> Self {
+    //     Self {
+    //         mac: config.mac.clone(),
+    //         account_id: config.account_id,
+    //         mode: mode.mode,
+    //         now_rate: Some(status.now_rate),
+    //         avg_rate: Some(status.avg_rate),
+    //         history_rate: Some(status.history_rate),
+    //         power_mode: Some(status.power_mode),
+    //         dig_time: Some(status.dig_time),
+    //         pool: status.pool,
+    //         hard_err: Some(status.hard_err),
+    //         refuse: Some(status.refuse),
+    //         temperature: Some(status.temperature),
+    //         fan: Some(status.fan),
+    //         led: Some(status.led),
+    //         coin: status.coin,
+    //         device_type: config.device_type.clone(),
+    //         device_name: config.device_name.clone(),
+    //         device_ip: status.ip,
+    //         group_id: config.group_id,
+    //         group_name: Some("".to_string()),
+    //         policy_id: config.policy_id,
+    //         policy_name: Some("".to_string()),
+    //         pool_id: config.pool_id,
+    //         pool_name: Some("".to_string()),
+    //         setting: config.setting.clone(),
+    //         hardware_version: config.hardware_version.clone(),
+    //         software_version: config.software_version.clone(),
+    //     }
+    // }
 
-    pub fn from_offline(
-        config: &BwMachine,
-        status: MessageUpdateBasic,
-    ) -> Self {
-        Self {
-            mac: config.mac.clone(),
-            account_id: config.account_id,
-            mode: 0,
-            now_rate: None,
-            avg_rate: None,
-            history_rate: None,
-            power_mode: None,
-            dig_time: None,
-            pool: status.pool,
-            hard_err: None,
-            refuse: None,
-            temperature: None,
-            fan: None,
-            led: None,
-            coin: status.coin,
-            device_type: config.device_type.clone(),
-            device_name: config.device_name.clone(),
-            device_ip: status.ip,
-            group_id: config.group_id,
-            group_name: Some("".to_string()),
-            policy_id: config.policy_id,
-            policy_name: Some("".to_string()),
-            pool_id: config.pool_id,
-            pool_name: Some("".to_string()),
-            setting: config.setting.clone(),
-            hardware_version: config.hardware_version.clone(),
-            software_version: config.software_version.clone(),
-        }
-    }
+    // pub fn from_offline(
+    //     config: &BwMachine,
+    //     status: MessageUpdateBasic,
+    // ) -> Self {
+    //     Self {
+    //         mac: config.mac.clone(),
+    //         account_id: config.account_id,
+    //         mode: 0,
+    //         now_rate: None,
+    //         avg_rate: None,
+    //         history_rate: None,
+    //         power_mode: None,
+    //         dig_time: None,
+    //         pool: status.pool,
+    //         hard_err: None,
+    //         refuse: None,
+    //         temperature: None,
+    //         fan: None,
+    //         led: None,
+    //         coin: status.coin,
+    //         device_type: config.device_type.clone(),
+    //         device_name: config.device_name.clone(),
+    //         device_ip: status.ip,
+    //         group_id: config.group_id,
+    //         group_name: Some("".to_string()),
+    //         policy_id: config.policy_id,
+    //         policy_name: Some("".to_string()),
+    //         pool_id: config.pool_id,
+    //         pool_name: Some("".to_string()),
+    //         setting: config.setting.clone(),
+    //         hardware_version: config.hardware_version.clone(),
+    //         software_version: config.software_version.clone(),
+    //     }
+    // }
 }
 
 // pub async fn get_machines(
