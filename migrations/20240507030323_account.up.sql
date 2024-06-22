@@ -1,6 +1,6 @@
 -- Add up migration script here
 CREATE TABLE bw_account (
-    account_id BIGINT PRIMARY KEY DEFAULT next_id(),
+    uid BIGINT PRIMARY KEY DEFAULT next_id(),
     name VARCHAR (50) NOT NULL,
     email VARCHAR (255) UNIQUE NOT NULL,
     email_verified_at TIMESTAMP,
@@ -27,7 +27,7 @@ CREATE INDEX idx_bw_account_email ON bw_account (email);
 CREATE INDEX idx_bw_account_created_at ON bw_account (created_at);
 CREATE INDEX idx_bw_account_updated_at ON bw_account (updated_at);
 
-COMMENT ON COLUMN bw_account.account_id IS '账户ID';
+COMMENT ON COLUMN bw_account.uid IS '账户ID';
 COMMENT ON COLUMN bw_account.NAME IS '用户名';
 COMMENT ON COLUMN bw_account.email IS '用户邮箱';
 COMMENT ON COLUMN bw_account.email_verified_at IS '邮箱验证时间';

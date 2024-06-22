@@ -1,7 +1,7 @@
 -- Add up migration script here
 CREATE TABLE bw_action (
     mac MACADDR PRIMARY KEY,
-    account_id BIGINT,
+    uid BIGINT,
     action action,
     remark TEXT,
 
@@ -15,4 +15,4 @@ BEFORE UPDATE ON bw_action
 FOR EACH ROW
 EXECUTE FUNCTION update_at();
 
-ALTER TABLE bw_action ADD FOREIGN KEY (account_id) REFERENCES bw_account(account_id);
+ALTER TABLE bw_action ADD FOREIGN KEY (uid) REFERENCES bw_account(uid);

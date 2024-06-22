@@ -5,7 +5,7 @@ use crate::library::{error::InnerResult, DB};
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct BwAccountSetting {
-    pub account_id: i64,
+    pub uid: i64,
     pub key: String,
 }
 
@@ -15,31 +15,31 @@ impl BwAccountSetting {
         item: &BwAccountSetting,
     ) -> InnerResult<Self> {
         let sql = r#"
-            INSERT INTO bw_account_setting (account_id, key) VALUES ($1, $2)
-            RETURNING account_id, key
+            INSERT INTO bw_account_setting (uid, key) VALUES ($1, $2)
+            RETURNING uid, key
             "#;
-        let map = sqlx::query_as(sql).bind(item.account_id).bind(&item.key);
+        let map = sqlx::query_as(sql).bind(item.uid).bind(&item.key);
         Ok(map.fetch_one(db).await?)
     }
 
-    pub async fn fetch_key_by_account_id(
+    pub async fn fetch_key_by_uid(
         db: &DB,
-        account_id: i64,
+        uid: i64,
     ) -> InnerResult<String> {
         let sql = r#"
         SELECT key
-        FROM bw_account_setting WHERE account_id = $1
+        FROM bw_account_setting WHERE uid = $1
         "#;
-        let map = sqlx::query_scalar(sql).bind(account_id);
+        let map = sqlx::query_scalar(sql).bind(uid);
         Ok(map.fetch_one(db).await?)
     }
 
-    pub async fn fetch_account_id_by_key(
+    pub async fn fetch_uid_by_key(
         db: &DB,
         key: &str,
     ) -> InnerResult<i64> {
         let sql = r#"
-        SELECT account_id
+        SELECT uid
         FROM bw_account_setting WHERE key = $1
         "#;
         let map = sqlx::query_scalar(sql).bind(key);

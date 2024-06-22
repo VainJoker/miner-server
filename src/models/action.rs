@@ -6,7 +6,7 @@ use super::types::Action;
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct BwAction {
-    pub account_id: i64,
+    pub uid: i64,
     pub mac: String,
 
     pub action: Action,

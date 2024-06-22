@@ -9,7 +9,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ReadMachineResponse {
     mac: String,
-    account_id: i64,
+    uid: i64,
 
     mode: usize,
     now_rate: Option<f64>,
@@ -51,7 +51,7 @@ impl ReadMachineResponse {
     // ) -> Self {
     //     Self {
     //         mac: config.mac.clone(),
-    //         account_id: config.account_id,
+    //         uid: config.uid,
     //         mode: mode.mode,
     //         now_rate: Some(status.now_rate),
     //         avg_rate: Some(status.avg_rate),
@@ -86,7 +86,7 @@ impl ReadMachineResponse {
     // ) -> Self {
     //     Self {
     //         mac: config.mac.clone(),
-    //         account_id: config.account_id,
+    //         uid: config.uid,
     //         mode: 0,
     //         now_rate: None,
     //         avg_rate: None,
@@ -118,10 +118,10 @@ impl ReadMachineResponse {
 
 // pub async fn get_machines(
 //     app_state: Arc<AppState>,
-//     account_id: i64,
+//     uid: i64,
 // ) -> AppResult<()> {
 //     let mut redis = app_state.get_redis().await?;
-//     let r_user_key = &format!("miner_user:{}", account_id);
+//     let r_user_key = &format!("miner_user:{}", uid);
 
 //     let r_user_fields = redis.hkeys(r_user_key).await?.unwrap();
 
@@ -183,8 +183,8 @@ impl ReadMachineResponse {
 //     }
 
 //     let bw_machines =
-//         BwMachine::fetch_machines_by_account_id(app_state.get_db(),
-// account_id)             .await
+//         BwMachine::fetch_machines_by_uid(app_state.get_db(),
+// uid)             .await
 //             .expect("Failed to fetch machines");
 //     let mut db_hash: HashMap<String, BwMachine> = HashMap::new();
 //     for bw_machine in bw_machines {

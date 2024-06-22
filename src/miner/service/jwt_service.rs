@@ -196,7 +196,7 @@ impl Claims {
         user: &BwAccount,
     ) -> AppResult<TokenSchema> {
         let user_info = UserInfo {
-            uid: user.account_id,
+            uid: user.uid,
             email: user.email.clone(),
             status: user.status,
         };
@@ -212,7 +212,7 @@ impl Claims {
         let claims = Claims::parse_token(token, TokenType::REFRESH, false)?;
 
         let user =
-            BwAccount::fetch_user_by_account_id(state.get_db(), claims.uid)
+            BwAccount::fetch_user_by_uid(state.get_db(), claims.uid)
                 .await?
                 .ok_or(AuthError(AuthInnerError::WrongCredentials))?;
 

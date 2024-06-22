@@ -74,12 +74,12 @@ pub async fn login_user_handler(
         if crypto::verify_password(&user.password, &body.password)? {
             let tokens = Claims::generate_tokens_for_user(&user).await?;
             let affected =
-                BwAccount::update_last_login(state.get_db(), user.account_id)
+                BwAccount::update_last_login(state.get_db(), user.uid)
                     .await?;
             if affected != 1 {
                 tracing::error!(
                     "Failed to update last login time for user: {}",
-                    user.account_id
+                    user.uid
                 );
             }
             // TODO: generate  key
@@ -210,7 +210,7 @@ pub async fn verify_active_account_code_handler(
         }
     }
 
-    let user = BwAccount::fetch_user_by_account_id(state.get_db(), claims.uid)
+    let user = BwAccount::fetch_user_by_uid(state.get_db(), claims.uid)
         .await?
         .ok_or(AuthError(AuthInnerError::WrongCredentials))?;
 
@@ -235,10 +235,10 @@ pub async fn change_password_handler(
     if let Some(active_code_stored) = redis.get::<String>(&key).await? {
         if active_code_stored == body.code {
             let item = ResetPasswordSchema {
-                account_id: claims.uid,
+                uid: claims.uid,
                 password: crypto::hash_password(body.password.as_bytes())?,
             };
-            BwAccount::update_password_by_account_id(state.get_db(), &item)
+            BwAccount::update_password_by_uid(state.get_db(), &item)
                 .await?;
             redis.del(&key).await?;
         } else {

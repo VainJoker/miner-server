@@ -81,10 +81,10 @@ impl Server {
         let mut redis = self.app_state.get_redis().await?;
 
         let r_user_key = format!("m_user:{}", sign.key);
-        let account_id = match redis.get(&r_user_key).await? {
+        let uid = match redis.get(&r_user_key).await? {
             Some(i) => i,
             None => {
-                let i = BwAccountSetting::fetch_account_id_by_key(
+                let i = BwAccountSetting::fetch_uid_by_key(
                     self.app_state.get_db(),
                     &sign.key,
                 )
@@ -100,7 +100,7 @@ impl Server {
 
         let item = CreateBwMachineSchema {
             mac: &sign.mac,
-            account_id,
+            uid,
             device_type: &sign.devtype,
             device_name: "",
             device_ip: &sign.ip,

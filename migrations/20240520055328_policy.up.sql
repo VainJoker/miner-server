@@ -1,7 +1,7 @@
 -- Add up migration script here
 CREATE TABLE bw_policy (
     policy_id BIGINT PRIMARY KEY DEFAULT next_id(),
-    account_id BIGINT NOT NULL,
+    uid BIGINT NOT NULL,
     name VARCHAR (50) NOT NULL,
 
     settings JSONB NOT NULL,
@@ -16,6 +16,6 @@ BEFORE UPDATE ON bw_policy
 FOR EACH ROW
 EXECUTE FUNCTION update_at();
 
-CREATE INDEX idx_bw_policy_account_id ON bw_policy (account_id);
+CREATE INDEX idx_bw_policy_uid ON bw_policy (uid);
 
-ALTER TABLE bw_policy ADD FOREIGN KEY (account_id) REFERENCES bw_account(account_id);
+ALTER TABLE bw_policy ADD FOREIGN KEY (uid) REFERENCES bw_account(uid);

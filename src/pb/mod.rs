@@ -1,3 +1,4 @@
+#![allow(clippy::all)]
 use crate::models::{machine::Coin, types::EnergyMode};
 
 pub mod miner_sign;

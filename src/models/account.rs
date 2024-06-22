@@ -9,7 +9,7 @@ use crate::{
 #[derive(sqlx::FromRow, Debug, Serialize, Deserialize, Clone)]
 #[sqlx(rename_all = "lowercase")]
 pub struct BwAccount {
-    pub account_id: i64,
+    pub uid: i64,
     pub name: String,
     pub email: String,
     pub email_verified_at: Option<NaiveDateTime>,
@@ -28,7 +28,7 @@ pub struct BwAccount {
 
 #[derive(Debug, Deserialize)]
 pub struct ResetPasswordSchema {
-    pub account_id: i64,
+    pub uid: i64,
     pub password: String,
 }
 
@@ -46,7 +46,7 @@ impl BwAccount {
     ) -> InnerResult<Self> {
         let sql = r#"
             INSERT INTO bw_account (name, email, password) VALUES ($1, $2, $3)
-            RETURNING account_id,name,email,email_verified_at,password,
+            RETURNING uid,name,email,email_verified_at,password,
             local_currency,system_lang ,
             status, failed_attempt, last_login,
             created_at,updated_at,deleted_at
@@ -68,13 +68,13 @@ impl BwAccount {
         Ok(map.fetch_one(db).await?)
     }
 
-    pub async fn check_user_exists_by_account_id(
+    pub async fn check_user_exists_by_uid(
         db: &DB,
-        account_id: &i64,
+        uid: &i64,
     ) -> InnerResult<Option<bool>> {
         let sql =
-            r#"SELECT EXISTS(SELECT 1 FROM bw_account WHERE account_id = $1)"#;
-        let map = sqlx::query_scalar(sql).bind(account_id);
+            r#"SELECT EXISTS(SELECT 1 FROM bw_account WHERE uid = $1)"#;
+        let map = sqlx::query_scalar(sql).bind(uid);
         Ok(map.fetch_one(db).await?)
     }
 
@@ -82,7 +82,7 @@ impl BwAccount {
         db: &DB,
         email_or_name: &str,
     ) -> InnerResult<Vec<Self>> {
-        let sql = r#"SELECT account_id,name,email,email_verified_at,password,
+        let sql = r#"SELECT uid,name,email,email_verified_at,password,
             local_currency,system_lang ,
             status, failed_attempt, last_login,
             created_at,updated_at,deleted_at
@@ -92,16 +92,16 @@ impl BwAccount {
         Ok(map.fetch_all(db).await?)
     }
 
-    pub async fn fetch_user_by_account_id(
+    pub async fn fetch_user_by_uid(
         db: &DB,
-        account_id: i64,
+        uid: i64,
     ) -> InnerResult<Option<Self>> {
-        let sql = r#"SELECT account_id,name,email,email_verified_at,password,
+        let sql = r#"SELECT uid,name,email,email_verified_at,password,
             local_currency, system_lang, status, failed_attempt, last_login,
             created_at,updated_at,deleted_at
-            FROM bw_account WHERE account_id = $1"#;
+            FROM bw_account WHERE uid = $1"#;
 
-        let map = sqlx::query_as(sql).bind(account_id);
+        let map = sqlx::query_as(sql).bind(uid);
         Ok(map.fetch_optional(db).await?)
     }
 
@@ -109,7 +109,7 @@ impl BwAccount {
         db: &DB,
         email: &str,
     ) -> InnerResult<Option<Self>> {
-        let sql = r#"SELECT account_id,name,email,email_verified_at,password,
+        let sql = r#"SELECT uid,name,email,email_verified_at,password,
             local_currency,system_lang ,
             status , failed_attempt, last_login,
             created_at,updated_at,deleted_at
@@ -120,49 +120,49 @@ impl BwAccount {
 
     pub async fn update_last_login(
         db: &DB,
-        account_id: i64,
+        uid: i64,
     ) -> InnerResult<u64> {
         let map = sqlx::query(
             r#"UPDATE bw_account SET last_login = now()
-        WHERE account_id = $1"#,
+        WHERE uid = $1"#,
         )
-        .bind(account_id);
+        .bind(uid);
         Ok(map.execute(db).await?.rows_affected())
     }
 
     pub async fn update_email_verified_at(
         db: &DB,
-        account_id: i64,
+        uid: i64,
     ) -> InnerResult<u64> {
         let map = sqlx::query(
             r#"UPDATE bw_account set email_verified_at = now(), status = 'active'
-        WHERE account_id = $1"#,
+        WHERE uid = $1"#,
         )
-            .bind(account_id);
+            .bind(uid);
         Ok(map.execute(db).await?.rows_affected())
     }
 
-    pub async fn update_password_by_account_id(
+    pub async fn update_password_by_uid(
         db: &DB,
         item: &ResetPasswordSchema,
     ) -> InnerResult<u64> {
         let map = sqlx::query(
             r#"UPDATE bw_account set password = $1
-        WHERE account_id = $2"#,
+        WHERE uid = $2"#,
         )
         .bind(&item.password)
-        .bind(item.account_id);
+        .bind(item.uid);
         Ok(map.execute(db).await?.rows_affected())
     }
 
-    pub async fn check_user_active_by_account_id(
+    pub async fn check_user_active_by_uid(
         db: &DB,
-        account_id: i64,
+        uid: i64,
     ) -> InnerResult<Option<bool>> {
         let map = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM bw_account WHERE account_id = $1 and status = 'active')",
+            "SELECT EXISTS(SELECT 1 FROM bw_account WHERE uid = $1 and status = 'active')",
         )
-            .bind(account_id);
+            .bind(uid);
         Ok(map.fetch_one(db).await?)
     }
 }
@@ -206,11 +206,11 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_fetch_user_by_account_id(pool: PgPool) -> sqlx::Result<()> {
-        let account = BwAccount::fetch_user_by_account_id(&pool, ACCOUNT_ID)
+    async fn test_fetch_user_by_uid(pool: PgPool) -> sqlx::Result<()> {
+        let account = BwAccount::fetch_user_by_uid(&pool, ACCOUNT_ID)
             .await
             .unwrap();
-        assert_eq!(account.unwrap().account_id, ACCOUNT_ID);
+        assert_eq!(account.unwrap().uid, ACCOUNT_ID);
 
         Ok(())
     }
@@ -226,11 +226,11 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_exists_by_account_id(
+    async fn test_check_user_exists_by_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let exists =
-            BwAccount::check_user_exists_by_account_id(&pool, &ACCOUNT_ID)
+            BwAccount::check_user_exists_by_uid(&pool, &ACCOUNT_ID)
                 .await
                 .unwrap();
         assert!(exists.unwrap());
@@ -239,11 +239,11 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_active_by_account_id(
+    async fn test_check_user_active_by_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let is_active =
-            BwAccount::check_user_active_by_account_id(&pool, ACCOUNT_ID)
+            BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
                 .await
                 .unwrap();
         assert!(!is_active.unwrap()); // Assuming the account is active
@@ -269,7 +269,7 @@ mod tests {
                 .unwrap();
         assert_eq!(rows_affected, 1);
         let is_active =
-            BwAccount::check_user_active_by_account_id(&pool, ACCOUNT_ID)
+            BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
                 .await
                 .unwrap();
         assert!(is_active.unwrap()); // Assuming the account is active
@@ -278,15 +278,15 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_update_password_by_account_id(
+    async fn test_update_password_by_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let item = ResetPasswordSchema {
-            account_id: ACCOUNT_ID,
+            uid: ACCOUNT_ID,
             password: "new_password".to_string(),
         };
         let rows_affected =
-            BwAccount::update_password_by_account_id(&pool, &item)
+            BwAccount::update_password_by_uid(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
@@ -322,11 +322,11 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_fetch_user_by_nonexistent_account_id(
+    async fn test_fetch_user_by_nonexistent_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let account =
-            BwAccount::fetch_user_by_account_id(&pool, NONEXISTENT_ACCOUNT_ID)
+            BwAccount::fetch_user_by_uid(&pool, NONEXISTENT_ACCOUNT_ID)
                 .await
                 .unwrap();
         assert!(account.is_none());
@@ -348,10 +348,10 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_exists_by_nonexistent_account_id(
+    async fn test_check_user_exists_by_nonexistent_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let exists = BwAccount::check_user_exists_by_account_id(
+        let exists = BwAccount::check_user_exists_by_uid(
             &pool,
             &NONEXISTENT_ACCOUNT_ID,
         )
@@ -363,10 +363,10 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_active_by_nonexistent_account_id(
+    async fn test_check_user_active_by_nonexistent_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let is_active = BwAccount::check_user_active_by_account_id(
+        let is_active = BwAccount::check_user_active_by_uid(
             &pool,
             NONEXISTENT_ACCOUNT_ID,
         )
@@ -408,11 +408,11 @@ mod tests {
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let item = ResetPasswordSchema {
-            account_id: NONEXISTENT_ACCOUNT_ID,
+            uid: NONEXISTENT_ACCOUNT_ID,
             password: "new_password".to_string(),
         };
         let rows_affected =
-            BwAccount::update_password_by_account_id(&pool, &item)
+            BwAccount::update_password_by_uid(&pool, &item)
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 0);

@@ -27,7 +27,7 @@ pub async fn create_group_handler(
     Json(body): Json<CreateGroupRequest>,
 ) -> AppResult<impl IntoResponse> {
     let item = CreateBwGroupSchema {
-        account_id: claims.uid,
+        uid: claims.uid,
         name: body.name,
         remark: body.remark,
     };
@@ -45,7 +45,7 @@ pub async fn get_groups_handler(
     State(state): State<Arc<AppState>>,
     claims: Claims,
 ) -> AppResult<impl IntoResponse> {
-    let group = BwGroup::fetch_group_by_account_id(state.get_db(), claims.uid)
+    let group = BwGroup::fetch_group_by_uid(state.get_db(), claims.uid)
         .await
         .map_err(|_| ApiError(ApiInnerError::GetGroupError))?;
     Ok(SuccessResponse {
@@ -60,7 +60,7 @@ pub async fn get_groups_by_ids_handler(
     Json(body): Json<ReadBwGroupRequest>,
 ) -> AppResult<impl IntoResponse> {
     let item = ReadBwGroupSchema {
-        account_id: claims.uid,
+        uid: claims.uid,
         group_ids: body.group_ids,
     };
 
@@ -80,7 +80,7 @@ pub async fn delete_group_handler(
 ) -> AppResult<impl IntoResponse> {
     let item = DeleteBwGroupSchema {
         group_id: body.group_id,
-        account_id: claims.uid,
+        uid: claims.uid,
     };
     let rows_affected =
         BwGroup::delete_group_by_group_id(state.get_db(), &item)
@@ -102,7 +102,7 @@ pub async fn update_group_handler(
 ) -> AppResult<impl IntoResponse> {
     let item = UpdateBwGroupSchema {
         group_id: body.group_id,
-        account_id: claims.uid,
+        uid: claims.uid,
         name: body.name,
         remark: body.remark,
     };

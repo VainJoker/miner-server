@@ -357,13 +357,13 @@ mod tests {
 //     redis.expect_get()
 //         .with(eq("account_key:key"))
 //         .times(1)
-//         .returning(|_| Ok(Some("account_id".to_string())));
+//         .returning(|_| Ok(Some("uid".to_string())));
 //     redis.expect_set_hash()
-//         .with(eq("miner_user:account_id"), eq("mac_address"), any())
+//         .with(eq("miner_user:uid"), eq("mac_address"), any())
 //         .times(1)
 //         .returning(|_, _, _| Ok(()));
 //     redis.expect_expire()
-//         .with(eq("miner_user:account_id"), eq(3600 * 24 * 30))
+//         .with(eq("miner_user:uid"), eq(3600 * 24 * 30))
 //         .times(1)
 //         .returning(|_, _| Ok(()));
 //
