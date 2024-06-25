@@ -22,10 +22,7 @@ impl BwAccountSetting {
         Ok(map.fetch_one(db).await?)
     }
 
-    pub async fn fetch_key_by_uid(
-        db: &DB,
-        uid: i64,
-    ) -> InnerResult<String> {
+    pub async fn fetch_key_by_uid(db: &DB, uid: i64) -> InnerResult<String> {
         let sql = r#"
         SELECT key
         FROM bw_account_setting WHERE uid = $1
@@ -34,10 +31,7 @@ impl BwAccountSetting {
         Ok(map.fetch_one(db).await?)
     }
 
-    pub async fn fetch_uid_by_key(
-        db: &DB,
-        key: &str,
-    ) -> InnerResult<i64> {
+    pub async fn fetch_uid_by_key(db: &DB, key: &str) -> InnerResult<i64> {
         let sql = r#"
         SELECT uid
         FROM bw_account_setting WHERE key = $1

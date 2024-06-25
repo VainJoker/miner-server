@@ -128,9 +128,7 @@ impl BwPolicy {
         created_at,updated_at,deleted_at
         FROM bw_policy WHERE uid = $1 AND policy_id = ANY($2)
         "#;
-        let map = sqlx::query_as(sql)
-            .bind(item.uid)
-            .bind(&item.policy_ids);
+        let map = sqlx::query_as(sql).bind(item.uid).bind(&item.policy_ids);
         Ok(map.fetch_all(db).await?)
     }
 }

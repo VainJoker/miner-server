@@ -72,8 +72,7 @@ impl BwAccount {
         db: &DB,
         uid: &i64,
     ) -> InnerResult<Option<bool>> {
-        let sql =
-            r#"SELECT EXISTS(SELECT 1 FROM bw_account WHERE uid = $1)"#;
+        let sql = r#"SELECT EXISTS(SELECT 1 FROM bw_account WHERE uid = $1)"#;
         let map = sqlx::query_scalar(sql).bind(uid);
         Ok(map.fetch_one(db).await?)
     }
@@ -118,10 +117,7 @@ impl BwAccount {
         Ok(map.fetch_optional(db).await?)
     }
 
-    pub async fn update_last_login(
-        db: &DB,
-        uid: i64,
-    ) -> InnerResult<u64> {
+    pub async fn update_last_login(db: &DB, uid: i64) -> InnerResult<u64> {
         let map = sqlx::query(
             r#"UPDATE bw_account SET last_login = now()
         WHERE uid = $1"#,
@@ -226,26 +222,20 @@ mod tests {
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_exists_by_uid(
-        pool: PgPool,
-    ) -> sqlx::Result<()> {
-        let exists =
-            BwAccount::check_user_exists_by_uid(&pool, &ACCOUNT_ID)
-                .await
-                .unwrap();
+    async fn test_check_user_exists_by_uid(pool: PgPool) -> sqlx::Result<()> {
+        let exists = BwAccount::check_user_exists_by_uid(&pool, &ACCOUNT_ID)
+            .await
+            .unwrap();
         assert!(exists.unwrap());
 
         Ok(())
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_check_user_active_by_uid(
-        pool: PgPool,
-    ) -> sqlx::Result<()> {
-        let is_active =
-            BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
-                .await
-                .unwrap();
+    async fn test_check_user_active_by_uid(pool: PgPool) -> sqlx::Result<()> {
+        let is_active = BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
         assert!(!is_active.unwrap()); // Assuming the account is active
 
         Ok(())
@@ -268,27 +258,23 @@ mod tests {
                 .await
                 .unwrap();
         assert_eq!(rows_affected, 1);
-        let is_active =
-            BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
-                .await
-                .unwrap();
+        let is_active = BwAccount::check_user_active_by_uid(&pool, ACCOUNT_ID)
+            .await
+            .unwrap();
         assert!(is_active.unwrap()); // Assuming the account is active
 
         Ok(())
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users")))]
-    async fn test_update_password_by_uid(
-        pool: PgPool,
-    ) -> sqlx::Result<()> {
+    async fn test_update_password_by_uid(pool: PgPool) -> sqlx::Result<()> {
         let item = ResetPasswordSchema {
             uid: ACCOUNT_ID,
             password: "new_password".to_string(),
         };
-        let rows_affected =
-            BwAccount::update_password_by_uid(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwAccount::update_password_by_uid(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 1);
 
         Ok(())
@@ -351,12 +337,10 @@ mod tests {
     async fn test_check_user_exists_by_nonexistent_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let exists = BwAccount::check_user_exists_by_uid(
-            &pool,
-            &NONEXISTENT_ACCOUNT_ID,
-        )
-        .await
-        .unwrap();
+        let exists =
+            BwAccount::check_user_exists_by_uid(&pool, &NONEXISTENT_ACCOUNT_ID)
+                .await
+                .unwrap();
         assert!(!exists.unwrap());
 
         Ok(())
@@ -366,12 +350,10 @@ mod tests {
     async fn test_check_user_active_by_nonexistent_uid(
         pool: PgPool,
     ) -> sqlx::Result<()> {
-        let is_active = BwAccount::check_user_active_by_uid(
-            &pool,
-            NONEXISTENT_ACCOUNT_ID,
-        )
-        .await
-        .unwrap();
+        let is_active =
+            BwAccount::check_user_active_by_uid(&pool, NONEXISTENT_ACCOUNT_ID)
+                .await
+                .unwrap();
         assert!(!is_active.unwrap()); // Assuming the account is inactive
 
         Ok(())
@@ -411,10 +393,9 @@ mod tests {
             uid: NONEXISTENT_ACCOUNT_ID,
             password: "new_password".to_string(),
         };
-        let rows_affected =
-            BwAccount::update_password_by_uid(&pool, &item)
-                .await
-                .unwrap();
+        let rows_affected = BwAccount::update_password_by_uid(&pool, &item)
+            .await
+            .unwrap();
         assert_eq!(rows_affected, 0);
 
         Ok(())

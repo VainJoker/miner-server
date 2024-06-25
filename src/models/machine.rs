@@ -89,6 +89,12 @@ pub struct CreateBwMachineSchema<'a> {
 }
 
 #[derive(Debug, Clone)]
+pub struct UpdateOtherBwMachineSchema<'a> {
+    pub mac: &'a str,
+    pub uid: i64,
+}
+
+#[derive(Debug, Clone)]
 pub struct UpdateGroupSchema<'a> {
     pub mac: &'a str,
     pub uid: i64,
@@ -128,10 +134,13 @@ impl BwMachine {
     ) -> InnerResult<Self> {
         let sql = r#"
             INSERT INTO bw_machine
-            (mac, uid, device_type, device_name, device_ip, setting, hardware_version, software_version)
+                (mac, uid, device_type, device_name, device_ip, setting, hardware_version, software_version)
             VALUES
-            (MACADDR($1), $2, $3, $4, INET($5), $6, $7, $8)
-            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
+                (MACADDR($1), $2, $3, $4, INET($5), $6, $7, $8)
+            ON CONFLICT (mac,uid) DO UPDATE
+                SET exist = true
+            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id,
+                policy_id, pool_id, setting, hardware_version, software_version, exist, created_at, updated_at, deleted_at
             "#;
 
         let map = sqlx::query_as(sql)
@@ -147,6 +156,20 @@ impl BwMachine {
         Ok(map.fetch_one(db).await?)
     }
 
+    pub async fn update_other_machines(
+        db: &DB,
+        item: &UpdateOtherBwMachineSchema<'_>,
+    ) -> InnerResult<u64> {
+        let sql = r#"
+            UPDATE bw_machine SET exist = false
+            WHERE uid != $1 AND mac = MACADDR($2)
+            "#;
+
+        let map = sqlx::query(sql).bind(item.uid).bind(item.mac);
+
+        Ok(map.execute(db).await?.rows_affected())
+    }
+
     pub async fn update_group_id(
         db: &DB,
         item: &UpdateGroupSchema<'_>,
@@ -156,7 +179,7 @@ impl BwMachine {
             SET group_id = $1
             WHERE mac = MACADDR($2) AND uid = $3
             RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR,
-            group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
+            group_id, policy_id, pool_id, setting, hardware_version, software_version, exist, created_at, updated_at, deleted_at
             "#;
 
         let map = sqlx::query_as(sql)
@@ -175,7 +198,7 @@ impl BwMachine {
             UPDATE bw_machine
             SET policy_id = $1
             WHERE mac = MACADDR($2) AND uid = $3
-            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
+            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, exist, created_at, updated_at, deleted_at
             "#;
 
         let map = sqlx::query_as(sql)
@@ -194,7 +217,7 @@ impl BwMachine {
             UPDATE bw_machine
             SET pool_id = $1
             WHERE mac = MACADDR($2) AND uid = $3
-            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, created_at, updated_at, deleted_at
+            RETURNING mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR, group_id, policy_id, pool_id, setting, hardware_version, software_version, exist, created_at, updated_at, deleted_at
             "#;
 
         let map = sqlx::query_as(sql)
@@ -209,7 +232,7 @@ impl BwMachine {
         db: &DB,
         item: &DeleteBwMachineSchema<'_>,
     ) -> InnerResult<u64> {
-        let sql = "UPDATE bw_machine SET deleted_at = NOW() WHERE mac = MACADDR($1) AND uid = $2";
+        let sql = "UPDATE bw_machine SET deleted_at = NOW(), exist = false WHERE mac = MACADDR($1) AND uid = $2";
         let map = sqlx::query(sql).bind(item.mac).bind(item.uid);
         Ok(map.execute(db).await?.rows_affected())
     }
@@ -218,11 +241,23 @@ impl BwMachine {
         db: &DB,
         uid: i64,
     ) -> InnerResult<Vec<Self>> {
-        let sql = r#"select mac::VARCHAR,uid,device_type,device_name,device_ip::VARCHAR,
-        group_id,policy_id,pool_id,setting,hardware_version,software_version,
+        let sql = r#"SELECT mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR,
+        group_id, policy_id, pool_id, setting, hardware_version, software_version, exist,
         created_at,updated_at,deleted_at from bw_machine
-        WHERE uid = $1 AND deleted_at IS NULL"#;
+        WHERE uid = $1 AND exist = true AND deleted_at IS NULL"#;
         let map = sqlx::query_as(sql).bind(uid);
+        Ok(map.fetch_all(db).await?)
+    }
+
+    pub async fn fetch_machine_by_mac(
+        db: &DB,
+        mac: &str,
+    ) -> InnerResult<Vec<Self>> {
+        let sql = r#"SELECT mac::VARCHAR, uid, device_type, device_name, device_ip::VARCHAR,
+        group_id, policy_id, pool_id, setting, hardware_version, software_version, exist,
+        created_at,updated_at,deleted_at from bw_machine
+        WHERE mac = MACADDR($1) AND exist = true AND deleted_at IS NULL"#;
+        let map = sqlx::query_as(sql).bind(mac);
         Ok(map.fetch_all(db).await?)
     }
 }
@@ -234,7 +269,7 @@ mod tests {
     use super::*;
     const ACCOUNT_ID: i64 = 6192889942050345985;
     const MAC1: &str = "28:e2:97:3e:6f:06";
-    // const MAC2: &str = "28:e2:97:3e:6f:07";
+    const _MAC2: &str = "28:e2:97:3e:6f:10";
     const GROUP_ID: i64 = 6193003777960711169;
     const POLICY_ID: i64 = 6194821006046008321;
     const POOL_ID: i64 = 6194824969470350666;
@@ -263,8 +298,19 @@ mod tests {
         };
 
         let res = BwMachine::create_bw_machine(&pool, &item).await.unwrap();
-        // eprintln!("{:#?}",res);
         assert_eq!(res.setting.crypto_coin, item.setting.crypto_coin);
+    }
+
+    #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
+    async fn test_update_other_machines(pool: PgPool) {
+        let item = UpdateOtherBwMachineSchema {
+            mac: MAC1,
+            uid: ACCOUNT_ID,
+        };
+        let rows_affected = BwMachine::update_other_machines(&pool, &item)
+            .await
+            .unwrap();
+        assert_eq!(rows_affected, 1)
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
@@ -312,12 +358,8 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
     async fn test_fetch_bw_machine_by_mac(pool: PgPool) {
-        let item = DeleteBwMachineSchema {
-            mac: MAC1,
-            uid: ACCOUNT_ID,
-        };
-        let res = BwMachine::delete_bw_machine(&pool, &item).await.unwrap();
-        assert_eq!(res, 1);
+        let res = BwMachine::fetch_machine_by_mac(&pool, MAC1).await.unwrap();
+        assert_eq!(res.len(), 1);
     }
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("machine")))]
@@ -325,6 +367,6 @@ mod tests {
         let res = BwMachine::fetch_machines_by_uid(&pool, ACCOUNT_ID)
             .await
             .unwrap();
-        assert_eq!(res.len(), 3);
+        assert_eq!(res.len(), 2);
     }
 }

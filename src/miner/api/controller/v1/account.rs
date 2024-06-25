@@ -74,8 +74,7 @@ pub async fn login_user_handler(
         if crypto::verify_password(&user.password, &body.password)? {
             let tokens = Claims::generate_tokens_for_user(&user).await?;
             let affected =
-                BwAccount::update_last_login(state.get_db(), user.uid)
-                    .await?;
+                BwAccount::update_last_login(state.get_db(), user.uid).await?;
             if affected != 1 {
                 tracing::error!(
                     "Failed to update last login time for user: {}",
@@ -238,8 +237,7 @@ pub async fn change_password_handler(
                 uid: claims.uid,
                 password: crypto::hash_password(body.password.as_bytes())?,
             };
-            BwAccount::update_password_by_uid(state.get_db(), &item)
-                .await?;
+            BwAccount::update_password_by_uid(state.get_db(), &item).await?;
             redis.del(&key).await?;
         } else {
             return Err(AuthError(AuthInnerError::WrongCode));

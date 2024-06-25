@@ -120,9 +120,7 @@ impl BwGroup {
         created_at,updated_at,deleted_at
         FROM bw_group WHERE uid = $1 AND group_id = ANY($2)
         "#;
-        let map = sqlx::query_as(sql)
-            .bind(item.uid)
-            .bind(&item.group_ids);
+        let map = sqlx::query_as(sql).bind(item.uid).bind(&item.group_ids);
         Ok(map.fetch_all(db).await?)
     }
 }
@@ -237,7 +235,7 @@ mod tests {
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let item = CreateBwGroupSchema {
-            uid: 0,        // Nonexistent uid
+            uid: 0,               // Nonexistent uid
             name: "".to_string(), // Empty name
             remark: Some("aaa".to_string()),
         };
@@ -299,9 +297,7 @@ mod tests {
         pool: PgPool,
     ) -> sqlx::Result<()> {
         let new_uid = 123456789; // An uid with no groups
-        let count = BwGroup::fetch_group_count(&pool, new_uid)
-            .await
-            .unwrap();
+        let count = BwGroup::fetch_group_count(&pool, new_uid).await.unwrap();
         assert_eq!(count.unwrap(), 0);
         let read_bw_group = ReadBwGroupSchema {
             group_ids: vec![],

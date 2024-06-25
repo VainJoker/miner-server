@@ -132,9 +132,7 @@ impl BwPool {
         created_at,updated_at,deleted_at
         FROM bw_pool WHERE uid = $1 AND pool_id = ANY($2)
         "#;
-        let map = sqlx::query_as(sql)
-            .bind(item.uid)
-            .bind(&item.pool_ids);
+        let map = sqlx::query_as(sql).bind(item.uid).bind(&item.pool_ids);
         Ok(map.fetch_all(db).await?)
     }
 }
@@ -176,9 +174,8 @@ mod tests {
 
     #[sqlx::test(fixtures(path = "../../fixtures", scripts("users", "pool")))]
     async fn test_fetch_pool_by_uid(pool: PgPool) -> sqlx::Result<()> {
-        let policies = BwPool::fetch_pool_by_uid(&pool, ACCOUNT_ID)
-            .await
-            .unwrap();
+        let policies =
+            BwPool::fetch_pool_by_uid(&pool, ACCOUNT_ID).await.unwrap();
         assert_eq!(policies.len(), 2);
 
         Ok(())

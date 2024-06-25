@@ -10,6 +10,7 @@ pub fn get_energy_modes(power_modes: Vec<String>) -> Vec<EnergyMode> {
             "hashrate" => Some(EnergyMode::Power),
             "lowerpower" => Some(EnergyMode::Economize),
             "ballance" => Some(EnergyMode::Balance),
+            "idle" => Some(EnergyMode::Idle),
             _ => None,
         })
         .collect()
