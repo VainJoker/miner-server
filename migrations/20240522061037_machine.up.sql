@@ -5,12 +5,15 @@ CREATE TABLE bw_machine (
     device_type VARCHAR (50) NOT NULL,
     device_name VARCHAR (50) NOT NULL,
     device_ip INET NOT NULL,
-    group_id BIGINT,
-    policy_id BIGINT,
-    pool_id BIGINT,
     setting JSONB NOT NULL,
     hardware_version VARCHAR (50) NOT NULL,
     software_version VARCHAR (50) NOT NULL,
+
+    group_id BIGINT,
+    policy_id BIGINT,
+    pool_id BIGINT,
+
+    exist bool NOT NULL DEFAULT TRUE,
 
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
@@ -26,6 +29,9 @@ FOR EACH ROW
 EXECUTE FUNCTION update_at();
 
 CREATE INDEX idx_bw_machine_uid ON bw_machine (uid);
+CREATE INDEX idx_bw_machine_group_id ON bw_machine (group_id);
+CREATE INDEX idx_bw_machine_policy_id ON bw_machine (policy_id);
+CREATE INDEX idx_bw_machine_pool_id ON bw_machine (pool_id);
 
 ALTER TABLE bw_machine ADD FOREIGN KEY (uid) REFERENCES bw_account(uid);
 ALTER TABLE bw_machine ADD FOREIGN KEY (group_id) REFERENCES bw_group(group_id);

@@ -26,6 +26,8 @@ pub struct BwMachine {
     pub hardware_version: String,
     pub software_version: String,
 
+    pub exist: bool,
+
     pub created_at: NaiveDateTime,
     pub updated_at: Option<NaiveDateTime>,
     pub deleted_at: Option<NaiveDateTime>,

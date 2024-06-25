@@ -21,28 +21,29 @@ pub struct MessageMode {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct MessageStatus {
     #[serde(rename = "nowrate")]
     pub now_rate: f64,
     #[serde(rename = "avgrate")]
     pub avg_rate: f64,
     #[serde(rename = "historyrate")]
-    pub(crate) history_rate: Vec<f64>,
+    pub history_rate: Vec<f64>,
     #[serde(rename = "powermode")]
-    pub(crate) power_mode: String,
+    pub power_mode: String,
     #[serde(rename = "digtime")]
-    pub(crate) dig_time: i32,
-    pub(crate) pool: Vec<Pool>,
+    pub dig_time: i32,
+    pub pool: Vec<Pool>,
     #[serde(rename = "harderr")]
-    pub(crate) hard_err: f64,
-    pub(crate) refuse: f64,
-    pub(crate) temperature: String,
-    pub(crate) fan: String,
-    pub(crate) led: i32,
-    pub(crate) ip: String,
-    key: String,
+    pub hard_err: f64,
+    pub refuse: f64,
+    pub temperature: String,
+    pub fan: String,
+    pub led: i32,
+    pub ip: String,
+    pub key: String,
     #[serde(rename = "coin", deserialize_with = "from_coin")]
-    pub(crate) coin: Option<Coin>,
+    pub coin: Option<Coin>,
 }
 
 // #[derive(Serialize, Deserialize, Debug)]
@@ -60,9 +61,9 @@ pub struct Pool {
     user: String,
     legal: bool,
     active: bool,
-    #[serde(rename = "dragid")]
+    #[serde(rename = "drag_id")]
     drag_id: i32,
-    #[serde(rename = "pool-priority")]
+    #[serde(rename = "pool_priority")]
     pool_priority: i32,
     pass: String,
 }
